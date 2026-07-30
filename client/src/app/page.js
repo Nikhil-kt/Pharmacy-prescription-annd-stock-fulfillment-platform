@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 export default function AuthPage() {
   const router = useRouter();
 
@@ -36,16 +37,18 @@ export default function AuthPage() {
 
     // Firebase Auth requirement check
     if (isSignUp && password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters long for Firebase Auth.");
+      setErrorMessage(
+        "Password must be at least 6 characters long for Firebase Auth.",
+      );
       return;
     }
 
     setLoading(true);
 
-    const endpoint = isSignUp 
-      ? "http://localhost:5000/api/signup" 
+    const endpoint = isSignUp
+      ? "http://localhost:5000/api/signup"
       : "http://localhost:5000/api/login";
-      
+
     const payload = isSignUp
       ? { fullName, role, email, password }
       : { role, email, password };
@@ -61,7 +64,9 @@ export default function AuthPage() {
 
       if (data.success) {
         if (isSignUp) {
-          setSuccessMessage("Account created successfully! Redirecting to sign in...");
+          setSuccessMessage(
+            "Account created successfully! Redirecting to sign in...",
+          );
           setTimeout(() => {
             setIsSignUp(false);
             setSuccessMessage("");
@@ -69,30 +74,56 @@ export default function AuthPage() {
         } else {
           // Redirect based on role returned from server
           if (data.role === "admin") router.push("/frontend/admin/dashboard");
-          else if (data.role === "pharmacist") router.push("/frontend/pharmacist/dashboard");
-          else if (data.role === "delivery") router.push("/frontend/delivery/dashboard");
+          else if (data.role === "pharmacist")
+            router.push("/frontend/pharmacist/dashboard");
+          else if (data.role === "delivery")
+            router.push("/frontend/delivery/dashboard");
           else router.push("/frontend/user/dashboard");
         }
       } else {
-        setErrorMessage(data.message || "Authentication failed. Please check your credentials.");
+        setErrorMessage(
+          data.message ||
+            "Authentication failed. Please check your credentials.",
+        );
       }
     } catch (err) {
-      setErrorMessage("Unable to connect to backend server. Make sure server.js is actively running on port 5000.");
+      setErrorMessage(
+        "Unable to connect to backend server. Make sure server.js is actively running on port 5000.",
+      );
     } finally {
       setLoading(false);
     }
   }
 
   const roleConfigs = [
-    { id: "customer", label: "Customer", icon: "👤", desc: "Order medicines & track prescriptions" },
-    { id: "pharmacist", label: "Pharmacist", icon: "💊", desc: "Fulfill orders & verify inventory" },
-    { id: "delivery", label: "Delivery", icon: "🚚", desc: "Manage dispatch & drop-offs" },
-    { id: "admin", label: "Administrator", icon: "🏥", desc: "System control & store management" },
+    {
+      id: "customer",
+      label: "Customer",
+      icon: "👤",
+      desc: "Order medicines & track prescriptions",
+    },
+    {
+      id: "pharmacist",
+      label: "Pharmacist",
+      icon: "💊",
+      desc: "Fulfill orders & verify inventory",
+    },
+    {
+      id: "delivery",
+      label: "Delivery",
+      icon: "🚚",
+      desc: "Manage dispatch & drop-offs",
+    },
+    {
+      id: "admin",
+      label: "Administrator",
+      icon: "🏥",
+      desc: "System control & store management",
+    },
   ];
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-between font-sans text-slate-100 antialiased relative overflow-hidden selection:bg-emerald-500 selection:text-white">
-      
       {/* Animated Ambient Background Glows */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl animate-[pulse_6s_ease-in-out_infinite]" />
       <div className="absolute top-1/2 right-[-10%] w-[500px] h-[500px] bg-teal-500/15 rounded-full blur-3xl animate-[pulse_8s_ease-in-out_infinite]" />
@@ -108,7 +139,6 @@ export default function AuthPage() {
 
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
         <div className="w-full max-w-5xl bg-slate-900/80 backdrop-blur-xl rounded-3xl shadow-2xl shadow-emerald-950/50 border border-slate-800 grid grid-cols-1 lg:grid-cols-12 min-h-[640px] overflow-hidden">
-          
           {/* Left Hero Panel (Branding & Visuals) */}
           <div className="lg:col-span-5 bg-gradient-to-br from-emerald-950 via-emerald-900/90 to-slate-950 p-8 lg:p-10 flex flex-col justify-between relative border-b lg:border-b-0 lg:border-r border-slate-800/80">
             <div className="space-y-6 z-10">
@@ -117,14 +147,20 @@ export default function AuthPage() {
                   💊
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black tracking-tight text-white leading-none">RxConnect</h1>
-                  <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase">Pharmacy Network</span>
+                  <h1 className="text-2xl font-black tracking-tight text-white leading-none">
+                    RxConnect
+                  </h1>
+                  <span className="text-[10px] text-emerald-400 font-semibold tracking-widest uppercase">
+                    Pharmacy Network
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <h2 className="text-3xl font-extrabold tracking-tight text-white leading-snug">
-                  {isSignUp ? "Join the Network Today." : "Smart Healthcare, Connected."}
+                  {isSignUp
+                    ? "Join the Network Today."
+                    : "Smart Healthcare, Connected."}
                 </h2>
                 <p className="text-slate-300 text-xs leading-relaxed">
                   {isSignUp
@@ -150,10 +186,12 @@ export default function AuthPage() {
 
             <div className="space-y-2 pt-4 border-t border-slate-800 text-xs text-slate-300">
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span> End-to-End Rx Hashing
+                <span className="text-emerald-400 font-bold">✓</span> End-to-End
+                Rx Hashing
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-emerald-400 font-bold">✓</span> Role-Based Dashboard Access
+                <span className="text-emerald-400 font-bold">✓</span> Role-Based
+                Dashboard Access
               </div>
             </div>
           </div>
@@ -161,7 +199,6 @@ export default function AuthPage() {
           {/* Right Form Panel */}
           <div className="lg:col-span-7 p-8 lg:p-12 flex flex-col justify-center bg-slate-900/90">
             <div className="max-w-md mx-auto w-full space-y-6">
-              
               {/* Tab Switcher */}
               <div className="flex bg-slate-950/80 p-1 rounded-xl border border-slate-800">
                 <button
@@ -172,7 +209,9 @@ export default function AuthPage() {
                     setSuccessMessage("");
                   }}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                    !isSignUp ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"
+                    !isSignUp
+                      ? "bg-emerald-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Sign In
@@ -185,7 +224,9 @@ export default function AuthPage() {
                     setSuccessMessage("");
                   }}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                    isSignUp ? "bg-emerald-600 text-white shadow-md" : "text-slate-400 hover:text-white"
+                    isSignUp
+                      ? "bg-emerald-600 text-white shadow-md"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Create Account
@@ -216,7 +257,6 @@ export default function AuthPage() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                
                 {/* Full Name Field (Sign Up Only) */}
                 {isSignUp && (
                   <div>
@@ -255,11 +295,17 @@ export default function AuthPage() {
                         >
                           <div className="flex items-center justify-between w-full mb-1">
                             <span className="text-sm">{item.icon}</span>
-                            <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-slate-700"}`} />
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-slate-700"}`}
+                            />
                           </div>
                           <div>
-                            <span className="text-xs font-bold block text-white">{item.label}</span>
-                            <span className="text-[10px] text-slate-400 block mt-0.5 leading-tight">{item.desc}</span>
+                            <span className="text-xs font-bold block text-white">
+                              {item.label}
+                            </span>
+                            <span className="text-[10px] text-slate-400 block mt-0.5 leading-tight">
+                              {item.desc}
+                            </span>
                           </div>
                         </button>
                       );
@@ -309,14 +355,20 @@ export default function AuthPage() {
                       Communicating with Server...
                     </span>
                   ) : (
-                    <span>{isSignUp ? "Register Account →" : "Sign In to Dashboard →"}</span>
+                    <span>
+                      {isSignUp
+                        ? "Register Account →"
+                        : "Sign In to Dashboard →"}
+                    </span>
                   )}
                 </button>
               </form>
 
               {/* Toggle Subtext */}
               <p className="text-center text-xs text-slate-400">
-                {isSignUp ? "Already registered on RxConnect?" : "New user to the platform?"}{" "}
+                {isSignUp
+                  ? "Already registered on RxConnect?"
+                  : "New user to the platform?"}{" "}
                 <button
                   type="button"
                   onClick={toggleMode}
@@ -325,10 +377,8 @@ export default function AuthPage() {
                   {isSignUp ? "Sign In" : "Create an Account"}
                 </button>
               </p>
-
             </div>
           </div>
-
         </div>
       </main>
 
