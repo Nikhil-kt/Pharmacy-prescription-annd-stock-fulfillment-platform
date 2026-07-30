@@ -13,6 +13,7 @@ dotenv.config();
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -21,8 +22,34 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
+// Routes
+const adminRoutes = require("./routes/adminRoutes");
+app.use("/api/admin", adminRoutes);
 
-// Test Route
+// Supabase Client
+const supabase = require("./config/supabase");
+
+/* ==========================================================
+   FIREBASE ADMIN INITIALIZATION
+========================================================== */
+
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
+
+const serviceAccount = require("./serviceAccountKey.json");
+
+initializeApp({
+  credential: cert(serviceAccount),
+});
+
+const auth = getAuth();
+const db = getFirestore();
+
+/* ==========================================================
+   ROOT ROUTE
+========================================================== */
+
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -40,5 +67,5 @@ app.use("/api/customer", customerRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 RxConnect Backend running on http://localhost:${PORT}`);
 });
