@@ -559,3 +559,139 @@ exports.getBranchOverview = async (req, res) => {
     });
   }
 };
+
+exports.addMedicine = async (req, res) => {
+  try {
+    const {
+      medicine_name,
+      manufacturer,
+      category,
+      description,
+      price,
+      prescription_required,
+    } = req.body;
+
+    if (!medicine_name || !manufacturer || !category || price == null) {
+      return res.status(400).json({
+        success: false,
+        error: "Required fields are missing.",
+      });
+    }
+
+    // Check duplicate medicine
+    const { data: existingMedicine } = await supabase
+      .from("medicines1")
+      .select("id")
+      .eq("medicine_name", medicine_name)
+      .maybeSingle();
+
+    if (existingMedicine) {
+      return res.status(400).json({
+        success: false,
+        message: "Medicine already exists.",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("medicines1")
+      .insert({
+        medicine_name,
+        manufacturer,
+        category,
+        description,
+        price,
+        prescription_required,
+      })
+      .select();
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Medicine added successfully.",
+      medicine: data[0],
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+exports.getAllMedicines = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("medicines1")
+      .select("*")
+      .order("medicine_name");
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+
+      totalMedicines: data.length,
+
+      medicines: data,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+
+      error: err.message,
+    });
+  }
+};
+
+exports.deleteMedicine = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if medicine exists in inventory
+    const { data: inventory } = await supabase
+      .from("inventory")
+      .select("id")
+      .eq("medicine_id", id);
+
+    if (inventory && inventory.length > 0) {
+      return res.status(400).json({
+        success: false,
+
+        message: "Cannot delete medicine because it exists in inventory.",
+      });
+    }
+
+    const { error } = await supabase.from("medicines1").delete().eq("id", id);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+
+        error: error.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+
+      message: "Medicine deleted successfully.",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+
+      error: err.message,
+    });
+  }
+};

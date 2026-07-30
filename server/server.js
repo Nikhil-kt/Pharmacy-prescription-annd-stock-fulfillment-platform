@@ -7,6 +7,8 @@ const { createClient } = require("@supabase/supabase-js");
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const inventorystockRoutes = require("./routes/InventorystockRoutes");
+const customerRoutes = require("./routes/customerRoutes");
 dotenv.config();
 
 const app = express();
@@ -31,33 +33,9 @@ app.get("/", (req, res) => {
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/delivery", deliveryRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/inventory", inventorystockRoutes);
 
-// Test Database Connection
-app.get("/api/test-db", async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("medicines")
-      .select("*")
-      .limit(5);
-
-    if (error) {
-      return res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-
-    res.json({
-      success: true,
-      medicines: data,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
+app.use("/api/customer", customerRoutes);
 
 const PORT = process.env.PORT || 5000;
 
