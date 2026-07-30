@@ -1,6 +1,8 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const { createClient } = require("@supabase/supabase-js");
 
 dotenv.config();
 
@@ -15,35 +17,22 @@ const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/admin", adminRoutes);
 
 // Supabase Client
-const supabase = require("./config/supabase");
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
-/* ==========================================================
-   FIREBASE ADMIN INITIALIZATION
-========================================================== */
-
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getAuth } = require("firebase-admin/auth");
-const { getFirestore } = require("firebase-admin/firestore");
-
-const serviceAccount = require("./serviceAccountKey.json");
-
-initializeApp({
-  credential: cert(serviceAccount),
-});
-
-const auth = getAuth();
-const db = getFirestore();
-
-/* ==========================================================
-   ROOT ROUTE
-========================================================== */
-
+// Test Route
 app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "RxConnect Backend is Running 🚀",
   });
 });
+
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/delivery", deliveryRoutes);
+app.use("/api/admin", adminRoutes);
 
 /* ==========================================================
    SUPABASE DATABASE TEST
