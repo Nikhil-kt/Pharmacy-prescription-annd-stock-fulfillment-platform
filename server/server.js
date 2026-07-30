@@ -1,8 +1,12 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
 
+const { createClient } = require("@supabase/supabase-js");
+const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 dotenv.config();
 
 const app = express();
@@ -13,7 +17,7 @@ app.use(express.json());
 // Supabase Client
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
 // Test Route
@@ -23,6 +27,10 @@ app.get("/", (req, res) => {
     message: "RxConnect Backend is Running 🚀",
   });
 });
+
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/delivery", deliveryRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Test Database Connection
 app.get("/api/test-db", async (req, res) => {
