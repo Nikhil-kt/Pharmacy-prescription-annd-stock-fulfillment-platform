@@ -54,20 +54,21 @@ router.post("/medicines", addMedicine);
 router.delete("/medicines/:id", deleteMedicine);
 
 module.exports = router;
-const router = express.Router();
 
-const adminController = require("../controllers/adminController");
+// const router = express.Router();
 
-router.get("/top-selling-medicines", adminController.getTopSellingMedicines);
-router.get("/low-stock-report", adminController.getLowStockReport);
-router.get("/branch-performance", adminController.getBranchPerformance);
-router.get("/branch-stock-alerts", adminController.getBranchStockAlerts);
-router.get("/todays-orders", adminController.getTodaysOrders);
-router.get("/prescription-logs", adminController.getPrescriptionLogs);
+// const adminController = require("../controllers/adminController");
 
-router.get("/manual-orders", adminController.getManualOrders);
-router.patch("/update-order-status", adminController.updateOrderStatus);
-router.get("/branch-performance-report", adminController.getExportBranchPerformance);
-router.get("/stock-failures", adminController.getStockRelatedFailures);
+// router.get("/top-selling-medicines", adminController.getTopSellingMedicines);
+// router.get("/low-stock-report", adminController.getLowStockReport);
+// router.get("/branch-performance", adminController.getBranchPerformance);
+// router.get("/branch-stock-alerts", adminController.getBranchStockAlerts);
+// router.get("/todays-orders", adminController.getTodaysOrders);
+// router.get("/prescription-logs", adminController.getPrescriptionLogs);
 
-module.exports = router;
+// router.get("/manual-orders", adminController.getManualOrders);
+// router.patch("/update-order-status", adminController.updateOrderStatus);
+// router.get("/branch-performance-report", adminController.getExportBranchPerformance);
+// router.get("/stock-failures", adminController.getStockRelatedFailures);
+
+// module.exports = router;
