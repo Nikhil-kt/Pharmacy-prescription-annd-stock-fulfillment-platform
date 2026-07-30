@@ -10,6 +10,7 @@ server/.env
 
 serviceAccountKey.json
 server/serviceAccountKey.json
+
 /.pnp
 .pnp.*
 .yarn/*

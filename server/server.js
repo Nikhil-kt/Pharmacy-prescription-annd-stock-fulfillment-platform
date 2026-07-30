@@ -1,31 +1,29 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
-
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getAuth } = require("firebase-admin/auth");
-const { getFirestore } = require("firebase-admin/firestore");
 
 dotenv.config();
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-/* ==========================================================
-   SUPABASE INITIALIZATION
-========================================================== */
+// Routes
+const adminRoutes = require("./routes/adminRoutes");
+app.use("/api/admin", adminRoutes);
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Supabase Client
+const supabase = require("./config/supabase");
 
 /* ==========================================================
    FIREBASE ADMIN INITIALIZATION
 ========================================================== */
+
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const serviceAccount = require("./serviceAccountKey.json");
 
@@ -92,14 +90,12 @@ app.post("/api/signup", async (req, res) => {
       });
     }
 
-    // Create Firebase Authentication user
     const userRecord = await auth.createUser({
       email,
       password,
       displayName: fullName,
     });
 
-    // Save additional information to Firestore
     await db.collection("users").doc(userRecord.uid).set({
       fullName,
       email,
