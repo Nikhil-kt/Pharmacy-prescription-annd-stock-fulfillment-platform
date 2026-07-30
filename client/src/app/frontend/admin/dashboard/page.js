@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// Correct relative path imports matching your project structure
+// Relative path imports matching your project structure
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/footer";
 
@@ -66,7 +66,7 @@ export default function AdminDashboard() {
       {/* Admin Dashboard Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Header / Navigation Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-gray-200 gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between pb-6 border-b border-gray-200 gap-4">
           <div>
             <span className="text-xs font-semibold text-[#0E7C50] tracking-wider uppercase">
               Management Portal
@@ -76,6 +76,7 @@ export default function AdminDashboard() {
             </h1>
           </div>
 
+          {/* Navigation Links including New Routes */}
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href="/frontend/admin/dashboard"
@@ -88,6 +89,24 @@ export default function AdminDashboard() {
               className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
             >
               Todays Orders ({todaysOrders.length})
+            </Link>
+            <Link
+              href="/frontend/admin/dashboard/manual-orders"
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Manual Orders
+            </Link>
+            <Link
+              href="/frontend/admin/dashboard/branch-performance"
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Branch Report
+            </Link>
+            <Link
+              href="/frontend/admin/dashboard/stock-failures"
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Stock Failures
             </Link>
             <Link
               href="/frontend/admin/dashboard/stock-alerts"
@@ -113,6 +132,14 @@ export default function AdminDashboard() {
             >
               Low Stock ({lowStock.length})
             </Link>
+
+<Link
+              href="/frontend/admin/dashboard/manual-orders"
+              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Order Approval
+            </Link>
+
           </div>
         </div>
 
