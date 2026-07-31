@@ -1,90 +1,59 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "../../../../components/Navbar";
 import Footer from "../../../../components/footer";
 
-export default function StockAlertsPage() {
+const API = "http://localhost:5000/api/admin";
+
+export default function StockAlerts() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchAlerts() {
-      try {
-        const res = await fetch("http://localhost:5000/api/admin/branch-stock-alerts");
-        const data = await res.json();
-        if (data.success) setAlerts(data.data || []);
-      } catch (err) {
-        console.error("Error fetching branch stock alerts:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchAlerts();
+    fetch(`${API}/branch-stock-alerts`)
+      .then((r) => r.json())
+      .then((d) => setAlerts(d?.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between pb-6 border-b border-gray-200">
-          <div>
-            <Link href="/frontend/admin/dashboard" className="text-xs font-semibold text-[#0E7C50] hover:underline">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-1">
-              Branch Stock Alerts
-            </h1>
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div>
+          <Link href="/frontend/admin/dashboard" className="text-xs text-[#0E7C50] hover:underline">← Admin Dashboard</Link>
+          <h1 className="text-2xl font-extrabold text-gray-900 mt-1">Branch Stock Alerts</h1>
+          <p className="text-xs text-gray-500 mt-1">{alerts.length} item(s) requiring attention.</p>
+        </div>
+        {loading ? (
+          <div className="p-10 text-center text-gray-400">Loading…</div>
+        ) : alerts.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 bg-white border rounded-xl">✅ All stock levels are healthy!</div>
+        ) : (
+          <div className="grid gap-3">
+            {alerts.map((item) => {
+              const med = Array.isArray(item.medicines) ? item.medicines[0] : item.medicines;
+              const branch = Array.isArray(item.branches) ? item.branches[0] : item.branches;
+              const isOut = item.quantity === 0;
+              return (
+                <div key={item.id} className={`bg-white border rounded-xl p-4 flex justify-between items-center ${isOut ? "border-red-200 bg-red-50/30" : "border-amber-200 bg-amber-50/30"}`}>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">{med?.name || "Unknown Medicine"}</p>
+                    <p className="text-xs text-gray-500">{branch?.branch_name || "Unknown Branch"}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-lg font-black ${isOut ? "text-red-600" : "text-amber-600"}`}>{item.quantity} units</p>
+                    <span className={`text-[11px] font-bold ${isOut ? "text-red-500" : "text-amber-500"}`}>
+                      {isOut ? "OUT OF STOCK" : `LOW (threshold: ${item.low_stock_threshold})`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-
-        <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500 text-sm">Loading alerts...</div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="py-3 px-4 font-semibold">Branch</th>
-                  <th className="py-3 px-4 font-semibold">Medicine Name</th>
-                  <th className="py-3 px-4 font-semibold">Current Stock</th>
-                  <th className="py-3 px-4 font-semibold">Threshold</th>
-                  <th className="py-3 px-4 font-semibold">Alert Severity</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
-                {alerts.length > 0 ? (
-                  alerts.map((alert, idx) => (
-                    <tr key={alert.id || idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">
-                        {alert.branch?.name || "Main Branch"}
-                      </td>
-                      <td className="py-3 px-4">
-                        {alert.medicines?.name || "Medicine Item"}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-red-600">
-                        {alert.quantity || 0} left
-                      </td>
-                      <td className="py-3 px-4 text-gray-500">
-                        {alert.low_stock_threshold || 0}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded-full border border-red-200">
-                          Critical Low
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="py-6 text-center text-gray-500">No branch stock alerts active.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+        )}
       </main>
       <Footer />
     </div>

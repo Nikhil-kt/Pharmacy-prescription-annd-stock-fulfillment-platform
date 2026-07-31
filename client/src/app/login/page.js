@@ -26,43 +26,38 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (signInError) throw signInError;
+      const data = await res.json();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      if (data.success) {
+        // Persist user data for use across pages
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+          localStorage.setItem("role", data.role || data.user.role || "customer");
+        }
 
-      if (userError || !user) throw userError ?? new Error("Could not get user");
+        const role = data.role;
 
-      // Fetch the user's role from the secure user_roles table
-      const { data: roleRow, error: roleError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (roleError && roleError.code !== "PGRST116") throw roleError;
-
-      const role = roleRow?.role ?? "user";
-
-      switch (role) {
-        case "admin":
-          router.push("/admin/dashboard");
-          break;
-        case "pharmacist":
-          router.push("/pharmacist/dashboard");
-          break;
-        case "delivery":
-          router.push("/delivery/dashboard");
-          break;
-        default:
-          router.push("/dashboard");
+        switch (role) {
+          case "admin":
+            router.push("/frontend/admin/dashboard");
+            break;
+          case "pharmacist":
+            router.push("/frontend/pharmacist/dashboard");
+            break;
+          case "delivery":
+            router.push("/frontend/delivery/dashboard");
+            break;
+          default:
+            router.push("/frontend/user/dashboard");
+        }
+      } else {
+        throw new Error(data.message || "Invalid login credentials");
       }
     } catch (err) {
       setError(err.message ?? "Login failed");

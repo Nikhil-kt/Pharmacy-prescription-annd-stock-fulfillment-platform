@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Navbar from "../../../components/Navbar";
 import Footer from "../../../components/footer";
-import { FileUp, CheckCircle, AlertCircle, Building2 } from "lucide-react";
+import { FileUp, CheckCircle, AlertCircle, Building2, Image as ImageIcon, Trash2 } from "lucide-react";
 
 export default function UploadPrescriptionPage() {
   const [branches, setBranches] = useState([]);
@@ -14,9 +14,11 @@ export default function UploadPrescriptionPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  const fileInputRef = useRef(null);
   const API_BASE_URL = "http://localhost:5000/api";
 
   const isValidUUID = (str) => {
+    if (!str) return false;
     const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return regex.test(str);
   };
@@ -47,7 +49,6 @@ export default function UploadPrescriptionPage() {
         // Fallback silently if branch list isn't reachable
       }
 
-      // Safe fallback data so UI never breaks
       setBranches([{ id: "1", branch_name: "Main Pharmacy Branch", address: "Default Location" }]);
       if (!savedBranch) setSelectedBranchId("1");
     }
@@ -56,15 +57,27 @@ export default function UploadPrescriptionPage() {
   }, []);
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
+    const selectedFile = e.target.files?.[0];
     if (selectedFile) {
+      if (!selectedFile.type.startsWith("image/")) {
+        setMessage({ type: "error", text: "Please select a valid image file (JPG, PNG, WEBP)." });
+        return;
+      }
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
         setFilePreview(reader.result);
+        setMessage({ type: "", text: "" });
       };
       reader.readAsDataURL(selectedFile);
     }
+  };
+
+  const handleRemoveFile = (e) => {
+    e.stopPropagation();
+    setFile(null);
+    setFilePreview("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSubmit = async (e) => {
@@ -77,17 +90,28 @@ export default function UploadPrescriptionPage() {
     setLoading(true);
     setMessage({ type: "", text: "" });
 
-    let customerId = typeof window !== "undefined" ? localStorage.getItem("customerId") : null;
-
-    if (!customerId || !isValidUUID(customerId)) {
-      customerId = typeof window !== "undefined" && window.crypto?.randomUUID 
-        ? window.crypto.randomUUID() 
-        : "a0000000-0000-0000-0000-000000000001";
+    let customerId = null;
+    const storedUser = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        if (parsed?.id && isValidUUID(parsed.id)) {
+          customerId = parsed.id;
+        }
+      } catch (e) {}
+    }
+    if (!customerId) {
+      const storedId = typeof window !== "undefined" ? localStorage.getItem("customerId") : null;
+      if (storedId && isValidUUID(storedId)) {
+        customerId = storedId;
+      }
     }
 
     const payload = {
       customer_id: customerId,
       image_url: filePreview,
+      branch_id: selectedBranchId,
+      notes: notes,
     };
 
     try {
@@ -104,15 +128,16 @@ export default function UploadPrescriptionPage() {
       if (res.ok && data.success) {
         setMessage({
           type: "success",
-          text: data.message || "Prescription uploaded successfully.",
+          text: data.message || "Prescription uploaded successfully! A pharmacist will review it shortly.",
         });
         setFile(null);
         setFilePreview("");
         setNotes("");
+        if (fileInputRef.current) fileInputRef.current.value = "";
       } else {
         setMessage({
           type: "error",
-          text: data.error || "Failed to upload prescription.",
+          text: data.error || data.message || "Failed to upload prescription.",
         });
       }
     } catch (err) {
@@ -171,19 +196,60 @@ export default function UploadPrescriptionPage() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-gray-700">Prescription Image</label>
-            <div className="border-2 border-dashed border-gray-200 hover:border-[#0E7C50] rounded-xl p-6 text-center space-y-2 transition bg-gray-50/50">
-              <FileUp size={28} className="mx-auto text-gray-400" />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                id="prescription-file"
-              />
-              <label htmlFor="prescription-file" className="cursor-pointer text-xs font-semibold text-[#0E7C50] block">
-                {file ? file.name : "Click to select an image file (JPG, PNG)"}
-              </label>
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+              id="prescription-file"
+            />
+
+            {!filePreview ? (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-200 hover:border-[#0E7C50] rounded-xl p-8 text-center space-y-3 transition bg-gray-50/50 cursor-pointer group"
+              >
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-[#0E7C50] flex items-center justify-center mx-auto group-hover:scale-110 transition">
+                  <FileUp size={24} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[#0E7C50]">Click to select an image file</p>
+                  <p className="text-[11px] text-gray-400 mt-1">Supports JPG, PNG, WEBP formats</p>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-emerald-200 bg-emerald-50/30 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-white relative">
+                  <img src={filePreview} alt="Prescription Preview" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 space-y-1 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-gray-800">
+                    <ImageIcon size={14} className="text-[#0E7C50]" />
+                    <span className="truncate max-w-[200px]">{file?.name}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    {(file?.size ? (file.size / 1024).toFixed(1) + " KB" : "Ready for submission")}
+                  </p>
+                  <div className="pt-2 flex items-center justify-center sm:justify-start gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3 py-1 bg-white border border-gray-200 rounded-md text-[11px] font-semibold text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      Change Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemoveFile}
+                      className="px-3 py-1 bg-rose-50 text-rose-600 rounded-md text-[11px] font-semibold hover:bg-rose-100 transition flex items-center gap-1"
+                    >
+                      <Trash2 size={12} /> Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -199,10 +265,17 @@ export default function UploadPrescriptionPage() {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-[#0E7C50] hover:bg-[#0B6A44] text-white py-3 rounded-lg text-xs font-bold transition disabled:opacity-50"
+            disabled={loading || !filePreview}
+            className="w-full bg-[#0E7C50] hover:bg-[#0B6A44] text-white py-3 rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {loading ? "Submitting Prescription..." : "Submit Prescription"}
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Submitting Prescription...
+              </>
+            ) : (
+              "Submit Prescription"
+            )}
           </button>
         </form>
       </main>

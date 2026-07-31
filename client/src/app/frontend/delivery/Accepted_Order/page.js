@@ -1,120 +1,92 @@
 "use client";
-
 import { useState, useEffect } from "react";
 
-export default function AcceptedOrderPage() {
-  const [deliveries, setDeliveries] = useState([]);
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [message, setMessage] = useState("");
+const API = "http://localhost:5000/api";
 
-  // 1. Fetch real deliveries from the database on page load
-  const fetchDeliveries = async () => {
-    setFetching(true);
-    try {
-      const res = await fetch("http://localhost:5000/api/delivery/");
-      const data = await res.json();
+export default function AcceptedOrders() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [message, setMessage] = useState({ type: "", text: "" });
 
-      if (res.ok && data.success) {
-        // Filter for orders that are assigned but not yet picked up/completed
-        const pendingPickups = (data.deliveries || []).filter(
-          (item) => item.status === "ASSIGNED" || item.status === "PENDING"
-        );
-        setDeliveries(pendingPickups.length > 0 ? pendingPickups : data.deliveries || []);
-      } else {
-        setMessage(`❌ Error fetching orders: ${data.error || "Failed to load"}`);
-      }
-    } catch (err) {
-      setMessage(`❌ Network Error: ${err.message}`);
-    } finally {
-      setFetching(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDeliveries();
-  }, []);
-
-  // 2. Handle Pickup Action (Persists to database via PUT /api/delivery/:id/pickup)
-  const handlePickup = async () => {
-    if (!selectedDeliveryId || selectedDeliveryId === "undefined") {
-      alert("Please select a valid order to pick up.");
-      return;
-    }
-
+  async function fetchOrders() {
     setLoading(true);
-    setMessage("");
-
     try {
-      const res = await fetch(`http://localhost:5000/api/delivery/${selectedDeliveryId}/pickup`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
-
+      const res = await fetch(`${API}/delivery/`);
       const data = await res.json();
+      // Show assigned deliveries (ready to be picked up)
+      const assigned = (data?.deliveries || []).filter((d) => d.status === "ASSIGNED");
+      setOrders(assigned);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
 
-      if (res.ok && data.success) {
-        setMessage("✅ Order marked as Picked Up in the database!");
-        setSelectedDeliveryId("");
-        fetchDeliveries(); // Refresh list after status update
+  useEffect(() => { fetchOrders(); }, []);
+
+  async function markPickedUp(id) {
+    setActionLoading(id);
+    try {
+      const res = await fetch(`${API}/delivery/${id}/pickup`, { method: "PUT" });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: "success", text: "Order marked as picked up!" });
+        fetchOrders();
       } else {
-        setMessage(`❌ Error: ${data.error || "Failed to pick up order"}`);
+        setMessage({ type: "error", text: data.error || "Failed to update." });
       }
-    } catch (err) {
-      setMessage(`❌ Network Error: ${err.message}`);
+    } catch (e) {
+      setMessage({ type: "error", text: e.message });
     } finally {
-      setLoading(false);
+      setActionLoading(null);
     }
-  };
+  }
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-6">
-      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-4">
-        <h1 className="text-2xl font-bold text-gray-800">Accepted Orders</h1>
-        <p className="text-gray-500 text-sm">Select an accepted order to mark as picked up.</p>
-
-        {message && (
-          <div className="p-3 rounded-lg bg-blue-50 text-blue-800 text-sm font-medium border border-blue-100">
-            {message}
-          </div>
-        )}
-
-        {fetching ? (
-          <p className="text-sm text-gray-500">Loading accepted orders from database...</p>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Select Order
-              </label>
-              <select
-                value={selectedDeliveryId}
-                onChange={(e) => setSelectedDeliveryId(e.target.value)}
-                className="w-full border border-gray-300 p-2.5 rounded-lg text-sm bg-white focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">-- Choose Accepted Order --</option>
-                {deliveries.map((item) => {
-                  const validId = item.id || item.delivery_id;
-                  return (
-                    <option key={validId} value={validId}>
-                      Delivery #{validId ? validId.slice(0, 8) : "N/A"} - Status: {item.status}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <button
-              onClick={handlePickup}
-              disabled={loading || !selectedDeliveryId}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 rounded-lg text-sm transition disabled:opacity-50"
-            >
-              {loading ? "Updating Database..." : "Mark as Picked Up"}
-            </button>
-          </div>
-        )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800">Accepted Orders</h1>
+          <p className="text-xs text-slate-500 mt-1">Orders assigned and ready for pickup.</p>
+        </div>
+        <button onClick={fetchOrders} className="text-xs font-semibold text-blue-600 hover:underline">↻ Refresh</button>
       </div>
+
+      {message.text && (
+        <div className={`p-3 rounded-xl text-xs font-medium border ${message.type === "success" ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+          {message.text}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="p-10 text-center text-slate-400">Loading…</div>
+      ) : orders.length === 0 ? (
+        <div className="p-10 text-center text-slate-400 bg-white border border-slate-200 rounded-xl">
+          No accepted orders waiting for pickup.
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {orders.map((d) => (
+            <div key={d.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div className="space-y-1">
+                <p className="text-xs font-mono text-slate-400">Delivery ID: {d.id?.slice(0, 16)}…</p>
+                <p className="text-sm font-bold text-slate-800">Order: {d.order_id?.slice(0, 20)}…</p>
+                <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                  ASSIGNED — Ready for Pickup
+                </span>
+                {d.notes && <p className="text-xs text-slate-500 italic">Note: {d.notes}</p>}
+                <p className="text-xs text-slate-400">Assigned at: {d.assigned_at ? new Date(d.assigned_at).toLocaleString() : "—"}</p>
+              </div>
+              <button
+                onClick={() => markPickedUp(d.id)}
+                disabled={actionLoading === d.id}
+                className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition disabled:opacity-50"
+              >
+                {actionLoading === d.id ? "Updating…" : "🛵 Mark Picked Up"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

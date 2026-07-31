@@ -1,242 +1,90 @@
 "use client";
-
 import { useState, useEffect } from "react";
 
-export default function TrackOrderPage() {
+const API = "http://localhost:5000/api";
+
+export default function TrackOrder() {
   const [deliveries, setDeliveries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState(null);
-  const [message, setMessage] = useState("");
-
-  // Helper function to format ISO timestamps into clear, human-readable date and time
-  const formatDateTime = (timestamp) => {
-    if (!timestamp) return "-";
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) return "-";
-
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  // Fetch active deliveries from the backend
-  const fetchDeliveries = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("http://localhost:5000/api/delivery/");
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setDeliveries(data.deliveries || []);
-      } else {
-        console.error("Failed to load deliveries:", data.error);
-      }
-    } catch (err) {
-      console.error("Network error:", err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchDeliveries();
+    fetch(`${API}/delivery/`)
+      .then((r) => r.json())
+      .then((d) => setDeliveries(d?.deliveries || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  // Generic handler to call status update endpoints
-  const handleStatusUpdate = async (id, endpoint, actionLabel) => {
-    setUpdatingId(id);
-    setMessage("");
+  const filtered = deliveries.filter((d) =>
+    d.order_id?.toLowerCase().includes(search.toLowerCase()) ||
+    d.id?.toLowerCase().includes(search.toLowerCase())
+  );
 
-    try {
-      const res = await fetch(`http://localhost:5000/api/delivery/${id}/${endpoint}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        setMessage(`✅ Order status updated to: ${actionLabel}`);
-        fetchDeliveries(); // Refresh list to get updated backend timestamps
-      } else {
-        setMessage(`❌ Error: ${data.error || "Failed to update status."}`);
-      }
-    } catch (err) {
-      setMessage(`❌ Network Error: ${err.message}`);
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "ASSIGNED":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "PICKED_UP":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      case "OUT_FOR_DELIVERY":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "DELIVERED":
-        return "bg-emerald-100 text-emerald-800 border-emerald-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+  const steps = ["ASSIGNED", "PICKED_UP", "OUT_FOR_DELIVERY", "DELIVERED"];
+  const stepLabel = { ASSIGNED: "Assigned", PICKED_UP: "Picked Up", OUT_FOR_DELIVERY: "Out for Delivery", DELIVERED: "Delivered" };
+  const stepIcon = { ASSIGNED: "📦", PICKED_UP: "🛵", OUT_FOR_DELIVERY: "🚚", DELIVERED: "✅" };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Track & Update Deliveries</h1>
-          <p className="text-sm text-gray-500">
-            Manage real-time lifecycle stages for assigned orders.
-          </p>
-        </div>
-        <button
-          onClick={fetchDeliveries}
-          className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-4 py-2 rounded-lg transition"
-        >
-          🔄 Refresh
-        </button>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-extrabold text-slate-800">Track Orders</h1>
+        <p className="text-xs text-slate-500 mt-1">Monitor real-time delivery progress.</p>
       </div>
 
-      {message && (
-        <div className="p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-lg text-sm font-medium">
-          {message}
-        </div>
-      )}
+      <input type="text" placeholder="Search by order ID or delivery ID..."
+        value={search} onChange={(e) => setSearch(e.target.value)}
+        className="border border-slate-200 rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-blue-400/30 w-80" />
 
       {loading ? (
-        <div className="p-8 text-center text-gray-500 text-sm">
-          Loading delivery records...
-        </div>
-      ) : deliveries.length === 0 ? (
-        <div className="p-8 text-center bg-gray-50 border rounded-xl text-gray-500 text-sm">
-          No deliveries found in the system.
-        </div>
+        <div className="p-10 text-center text-slate-400">Loading…</div>
+      ) : filtered.length === 0 ? (
+        <div className="p-10 text-center text-slate-400">No deliveries found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {deliveries.map((item) => (
-            <div
-              key={item.id}
-              className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm space-y-4 flex flex-col justify-between"
-            >
-              <div className="space-y-2">
+        <div className="space-y-4">
+          {filtered.map((d) => {
+            const currentStep = steps.indexOf(d.status);
+            return (
+              <div key={d.id} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-xs font-semibold text-gray-400 block">
-                      DELIVERY ID
-                    </span>
-                    <span className="font-mono text-sm text-gray-800 font-bold">
-                      #{item.id?.slice(0, 8)}...
-                    </span>
+                    <p className="text-xs font-mono text-slate-400">Order: {d.order_id?.slice(0, 20)}…</p>
+                    <p className="text-sm font-bold text-slate-800 mt-0.5">Delivery ID: {d.id?.slice(0, 16)}…</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Assigned: {d.assigned_at ? new Date(d.assigned_at).toLocaleString() : "—"}</p>
                   </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(
-                      item.status
-                    )}`}
-                  >
-                    {item.status}
-                  </span>
+                  {d.status === "DELIVERED" && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full border border-emerald-200">
+                      Completed ✓
+                    </span>
+                  )}
                 </div>
-
-                <div className="text-xs text-gray-600 space-y-1 pt-2 border-t">
-                  <p>
-                    <strong className="text-gray-700">Order ID:</strong>{" "}
-                    <span className="font-mono">{item.order_id?.slice(0, 8)}...</span>
-                  </p>
-                  <p>
-                    <strong className="text-gray-700">Partner ID:</strong>{" "}
-                    <span className="font-mono">
-                      {item.delivery_partner_id?.slice(0, 8)}...
-                    </span>
-                  </p>
-                  <p>
-                    <strong className="text-gray-700">Notes:</strong>{" "}
-                    {item.notes || "None"}
-                  </p>
-                </div>
-
-                {/* Updated Lifecycle Timestamps Container */}
-                <div className="bg-gray-50 p-3 rounded-lg text-xs text-gray-600 space-y-1.5 border">
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-500">Assigned:</span>
-                    <span className="font-medium text-gray-800">
-                      {formatDateTime(item.assigned_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-500">Picked Up:</span>
-                    <span className="font-medium text-gray-800">
-                      {formatDateTime(item.picked_up_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-500">Out for Delivery:</span>
-                    <span className="font-medium text-gray-800">
-                      {formatDateTime(item.out_for_delivery_at)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-semibold text-gray-500">Delivered:</span>
-                    <span className="font-medium text-gray-800">
-                      {formatDateTime(item.delivered_at)}
-                    </span>
-                  </div>
+                {/* Progress Bar */}
+                <div className="flex items-center gap-0">
+                  {steps.map((step, i) => {
+                    const done = i <= currentStep;
+                    const active = i === currentStep;
+                    return (
+                      <div key={step} className="flex items-center flex-1 last:flex-none">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition
+                            ${done ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-slate-300 text-slate-400"}
+                            ${active ? "ring-4 ring-blue-200" : ""}`}>
+                            {done ? stepIcon[step] : i + 1}
+                          </div>
+                          <span className={`text-[10px] font-semibold text-center ${done ? "text-blue-700" : "text-slate-400"}`}>
+                            {stepLabel[step]}
+                          </span>
+                        </div>
+                        {i < steps.length - 1 && (
+                          <div className={`flex-1 h-0.5 mb-4 mx-1 ${i < currentStep ? "bg-blue-500" : "bg-slate-200"}`} />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-
-              {/* Action Stage Buttons */}
-              <div className="pt-2 flex gap-2">
-                {item.status === "ASSIGNED" && (
-                  <button
-                    onClick={() => handleStatusUpdate(item.id, "pickup", "Picked Up")}
-                    disabled={updatingId === item.id}
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium py-2 rounded-lg transition disabled:opacity-50"
-                  >
-                    {updatingId === item.id ? "Updating..." : "Mark as Picked Up"}
-                  </button>
-                )}
-
-                {item.status === "PICKED_UP" && (
-                  <button
-                    onClick={() =>
-                      handleStatusUpdate(
-                        item.id,
-                        "out-for-delivery",
-                        "Out for Delivery"
-                      )
-                    }
-                    disabled={updatingId === item.id}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium py-2 rounded-lg transition disabled:opacity-50"
-                  >
-                    {updatingId === item.id ? "Updating..." : "Start Delivery"}
-                  </button>
-                )}
-
-                {item.status === "OUT_FOR_DELIVERY" && (
-                  <button
-                    onClick={() => handleStatusUpdate(item.id, "delivered", "Delivered")}
-                    disabled={updatingId === item.id}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-2 rounded-lg transition disabled:opacity-50"
-                  >
-                    {updatingId === item.id ? "Updating..." : "Mark as Delivered"}
-                  </button>
-                )}
-
-                {item.status === "DELIVERED" && (
-                  <div className="w-full text-center text-xs font-bold text-emerald-600 py-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
-                    ✓ Completed
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,90 +1,69 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "../../../../components/Navbar";
 import Footer from "../../../../components/footer";
 
-export default function PrescriptionLogsPage() {
+const API = "http://localhost:5000/api/admin";
+
+export default function PrescriptionLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchLogs() {
-      try {
-        const res = await fetch("http://localhost:5000/api/admin/prescription-logs");
-        const data = await res.json();
-        if (data.success) setLogs(data.data || []);
-      } catch (err) {
-        console.error("Error fetching prescription logs:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchLogs();
+    fetch(`${API}/prescription-logs`)
+      .then((r) => r.json())
+      .then((d) => setLogs(d?.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between">
-      <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between pb-6 border-b border-gray-200">
-          <div>
-            <Link href="/frontend/admin/dashboard" className="text-xs font-semibold text-[#0E7C50] hover:underline">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-1">
-              Prescription Verification Logs
-            </h1>
-          </div>
-        </div>
+  const statusBadge = { APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200", REJECTED: "bg-red-50 text-red-700 border-red-200", PENDING: "bg-amber-50 text-amber-700 border-amber-200" };
 
-        <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500 text-sm">Loading verification logs...</div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="py-3 px-4 font-semibold">Prescription ID</th>
-                  <th className="py-3 px-4 font-semibold">Reviewed By</th>
-                  <th className="py-3 px-4 font-semibold">Status</th>
-                  <th className="py-3 px-4 font-semibold">Timestamp</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
-                {logs.length > 0 ? (
-                  logs.map((log, idx) => (
-                    <tr key={log.id || idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">
-                        #{log.prescriptions?.id || log.id}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {log.pharmacists?.full_name || log.pharmacists?.email || "Pharmacist"}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                          log.status === "approved" || log.status === "Approved"
-                            ? "bg-green-50 text-green-700 border-green-200" 
-                            : "bg-red-50 text-red-700 border-red-200"
-                        }`}>
-                          {log.status || "Verified"}
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Navbar />
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div>
+          <Link href="/frontend/admin/dashboard" className="text-xs text-[#0E7C50] hover:underline">← Admin Dashboard</Link>
+          <h1 className="text-2xl font-extrabold text-gray-900 mt-1">Prescription Logs</h1>
+          <p className="text-xs text-gray-500 mt-1">History of all prescription review actions by pharmacists.</p>
+        </div>
+        {loading ? (
+          <div className="p-10 text-center text-gray-400">Loading…</div>
+        ) : logs.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 bg-white border rounded-xl">No prescription review logs yet.</div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b text-gray-500 uppercase tracking-wide">
+                  <tr>
+                    {["Review ID", "Prescription", "Pharmacist", "Status", "Remarks", "Reviewed At"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono text-gray-400">{log.id?.slice(0, 10)}…</td>
+                      <td className="px-4 py-3 font-mono text-gray-500">{log.prescription_id?.slice(0, 12) || "—"}…</td>
+                      <td className="px-4 py-3 text-gray-700">{log.pharmacists?.full_name || log.pharmacist_id?.slice(0, 10) || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold border ${statusBadge[log.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                          {log.status || "—"}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-gray-500 text-xs">
-                        {log.reviewed_at ? new Date(log.reviewed_at).toLocaleString() : "N/A"}
-                      </td>
+                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{log.remarks || "—"}</td>
+                      <td className="px-4 py-3 text-gray-500">{log.reviewed_at ? new Date(log.reviewed_at).toLocaleString() : "—"}</td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="4" className="py-6 text-center text-gray-500">No prescription logs found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

@@ -46,35 +46,30 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-          data: { full_name: form.full_name, phone: form.phone },
-        },
+      const res = await fetch("http://localhost:5000/api/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.full_name,
+          email: form.email,
+          password: form.password,
+          role: "customer"
+        }),
       });
 
-      if (signUpError) throw signUpError;
+      const data = await res.json();
 
-      const { error: insertError } = await supabase.from("users").insert({
-        id: data.user.id,
-        full_name: form.full_name,
-        email: form.email,
-        phone: form.phone,
-        role: "customer",
-        branch_id: null,
-      });
-
-      if (insertError) throw insertError;
-
-      setMessage("Account created! Check your email to confirm, then sign in.");
-      setTimeout(() => router.push("/login"), 1500);
+      if (data.success) {
+        setMessage("Account created successfully! Redirecting to login...");
+        setTimeout(() => router.push("/login"), 1500);
+      } else {
+        throw new Error(data.message || "Sign up failed");
+      }
     } catch (err) {
       setError(err.message || "Sign up failed");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (

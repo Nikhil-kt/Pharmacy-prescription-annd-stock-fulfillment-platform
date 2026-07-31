@@ -1,160 +1,81 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "../../../../components/Navbar";
 import Footer from "../../../../components/footer";
 
-export default function BranchPerformancePage() {
+const API = "http://localhost:5000/api/admin";
+
+export default function BranchPerformance() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchReport() {
-      try {
-        const res = await fetch(
-          "http://localhost:5000/api/admin/branch-performance"
-        );
-        const result = await res.json();
-        if (result.success) setData(result.data || []);
-      } catch (err) {
-        console.error("Failed to fetch branch performance report:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchReport();
+    fetch(`${API}/branch-performance`)
+      .then((r) => r.json())
+      .then((d) => setData(d?.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const downloadCSV = () => {
-    if (data.length === 0) return;
-
-    const headers = [
-      "Branch ID",
-      "Branch Name",
-      "Address",
-      "Total Orders",
-      "Completed Orders",
-      "Cancelled Orders",
-      "Total Revenue (INR)",
-    ];
-
-    const rows = data.map((item) => [
-      `"${item.branchId || item.branch_id || ""}"`,
-      `"${item.branchName || item.branch_name || ""}"`,
-      `"${item.address || ""}"`,
-      item.totalOrders ?? item.total_orders ?? 0,
-      item.completedOrders ?? item.completed_orders ?? 0,
-      item.cancelledOrders ?? item.cancelled_orders ?? 0,
-      item.totalRevenue ?? item.total_revenue ?? 0,
-    ]);
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `Branch_Performance_Report_${new Date().toISOString().split("T")[0]}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const totalRevenue = data.reduce((s, b) => s + Number(b.totalRevenue || 0), 0);
+  const totalOrders = data.reduce((s, b) => s + Number(b.totalOrders || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div>
+          <Link href="/frontend/admin/dashboard" className="text-xs text-[#0E7C50] hover:underline">← Admin Dashboard</Link>
+          <h1 className="text-2xl font-extrabold text-gray-900 mt-1">Branch Performance</h1>
+          <p className="text-xs text-gray-500 mt-1">Revenue and order metrics per branch.</p>
+        </div>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 border-b border-gray-200 gap-4">
-          <div>
-            <span className="text-xs font-semibold text-[#0E7C50] tracking-wider uppercase">
-              Management Portal
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-0.5">
-              Export Branch Performance Report
-            </h1>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Total Branches</p>
+            <p className="text-2xl font-black text-gray-900 mt-1">{loading ? "…" : data.length}</p>
           </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/frontend/admin/dashboard"
-              className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Back to Dashboard
-            </Link>
-            <button
-              onClick={downloadCSV}
-              disabled={loading || data.length === 0}
-              className="px-4 py-2 bg-[#0E7C50] text-white text-xs font-medium rounded-md shadow-sm hover:bg-[#0B6A44] transition-colors disabled:opacity-50"
-            >
-              Export CSV Report
-            </button>
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Total Revenue</p>
+            <p className="text-2xl font-black text-[#0E7C50] mt-1">₹{loading ? "…" : totalRevenue.toFixed(0)}</p>
+          </div>
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Total Orders</p>
+            <p className="text-2xl font-black text-gray-900 mt-1">{loading ? "…" : totalOrders}</p>
           </div>
         </div>
 
-        {/* Performance Data Table */}
-        <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-sm text-gray-500">
-              Generating branch performance metrics...
-            </div>
-          ) : data.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-500">
-              No branch performance data found.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm divide-y divide-gray-200">
-                <thead className="bg-gray-50 text-gray-500 text-xs font-semibold uppercase tracking-wider">
-                  <tr>
-                    <th className="px-6 py-3">Branch Name</th>
-                    <th className="px-6 py-3">Address</th>
-                    <th className="px-6 py-3 text-center">Total Orders</th>
-                    <th className="px-6 py-3 text-center">Completed</th>
-                    <th className="px-6 py-3 text-center">Cancelled</th>
-                    <th className="px-6 py-3 text-right">Total Revenue</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {data.map((row, index) => (
-                    <tr
-                      key={row.branchId || row.branch_id || row.id || index}
-                      className="hover:bg-gray-50/80 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-semibold text-gray-900">
-                        {row.branchName || row.branch_name || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 max-w-xs truncate">
-                        {row.address || "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-center font-mono text-gray-700">
-                        {row.totalOrders ?? row.total_orders ?? 0}
-                      </td>
-                      <td className="px-6 py-4 text-center font-mono text-emerald-600 font-medium">
-                        {row.completedOrders ?? row.completed_orders ?? 0}
-                      </td>
-                      <td className="px-6 py-4 text-center font-mono text-rose-600 font-medium">
-                        {row.cancelledOrders ?? row.cancelled_orders ?? 0}
-                      </td>
-                      <td className="px-6 py-4 text-right font-mono font-bold text-[#0E7C50]">
-                        ₹{(row.totalRevenue ?? row.total_revenue ?? 0).toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="p-10 text-center text-gray-400">Loading…</div>
+        ) : data.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 bg-white border rounded-xl">No branch data available.</div>
+        ) : (
+          <div className="grid gap-4">
+            {data.sort((a, b) => b.totalRevenue - a.totalRevenue).map((branch, i) => {
+              const pct = totalRevenue > 0 ? (branch.totalRevenue / totalRevenue) * 100 : 0;
+              return (
+                <div key={branch.branchId || i} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-sm">{branch.branchName}</h3>
+                      <p className="text-xs text-gray-500">{branch.city}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-[#0E7C50] text-lg">₹{Number(branch.totalRevenue || 0).toFixed(0)}</p>
+                      <p className="text-xs text-gray-500">{branch.totalOrders} orders</p>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#0E7C50] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">{pct.toFixed(1)}% of total revenue</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </main>
-
       <Footer />
     </div>
   );

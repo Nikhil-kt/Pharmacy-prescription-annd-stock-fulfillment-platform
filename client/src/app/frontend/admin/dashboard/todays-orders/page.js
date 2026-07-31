@@ -1,121 +1,86 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "../../../../components/Navbar";
 import Footer from "../../../../components/footer";
 
-export default function TodaysOrdersPage() {
+const API = "http://localhost:5000/api/admin";
+const statusColor = { PLACED: "bg-blue-50 text-blue-700", APPROVED: "bg-emerald-50 text-emerald-700", CANCELLED: "bg-red-50 text-red-700", DELIVERED: "bg-gray-100 text-gray-600", PRESCRIPTION_PENDING: "bg-amber-50 text-amber-700" };
+
+export default function TodaysOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function fetchOrders() {
-      try {
-        const res = await fetch("http://localhost:5000/api/admin/todays-orders");
-
-        if (!res.ok) {
-          console.error(`Fetch failed with status ${res.status} from backend.`);
-          setError(`Failed to fetch orders (Server response: ${res.status})`);
-          return;
-        }
-
-        const data = await res.json();
-        if (data.success) {
-          setOrders(data.data || []);
-        } else {
-          setError(data.message || "Failed to load orders");
-        }
-      } catch (err) {
-        console.error("Error fetching today's orders:", err);
-        setError("Network error or server is unreachable.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchOrders();
+    fetch(`${API}/todays-orders`)
+      .then((r) => r.json())
+      .then((d) => setOrders(d?.data || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
+  const total = orders.reduce((s, o) => s + Number(o.total_amount || 0), 0);
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col justify-between font-sans">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar />
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex items-center justify-between pb-6 border-b border-gray-200">
-          <div>
-            <Link
-              href="/frontend/admin/dashboard"
-              className="text-xs font-semibold text-[#0E7C50] hover:underline"
-            >
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight mt-1">
-              Todays Orders
-            </h1>
-          </div>
-          <span className="text-xs px-3 py-1 bg-green-50 text-[#0E7C50] font-semibold border border-green-200 rounded-full">
-            Total Orders: {orders.length}
-          </span>
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+        <div>
+          <Link href="/frontend/admin/dashboard" className="text-xs text-[#0E7C50] hover:underline">← Admin Dashboard</Link>
+          <h1 className="text-2xl font-extrabold text-gray-900 mt-1">Today's Orders</h1>
+          <p className="text-xs text-gray-500 mt-1">All orders placed today — {new Date().toDateString()}</p>
         </div>
 
-        <div className="mt-8 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-gray-500 text-sm">
-              Loading todays orders...
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center text-rose-600 text-sm bg-rose-50 border-t border-rose-100">
-              {error}
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
-                  <th className="py-3 px-4 font-semibold">Order ID</th>
-                  <th className="py-3 px-4 font-semibold">Customer</th>
-                  <th className="py-3 px-4 font-semibold">Branch</th>
-                  <th className="py-3 px-4 font-semibold">Total Amount</th>
-                  <th className="py-3 px-4 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
-                {orders.length > 0 ? (
-                  orders.map((order, idx) => (
-                    <tr key={order.id || idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">
-                        #{order.id || idx + 1}
-                      </td>
-                      <td className="py-3 px-4">
-                        {order.customers?.full_name || order.customers?.email || "Guest Customer"}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {order.branch?.name || "N/A"}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-[#0E7C50]">
-                        ₹{order.total_amount || 0}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200 font-medium capitalize">
-                          {order.status || "Pending"}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Total Orders</p>
+            <p className="text-2xl font-black text-gray-900 mt-1">{loading ? "…" : orders.length}</p>
+          </div>
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Revenue Today</p>
+            <p className="text-2xl font-black text-[#0E7C50] mt-1">₹{loading ? "…" : total.toFixed(2)}</p>
+          </div>
+          <div className="bg-white border rounded-xl p-5">
+            <p className="text-xs text-gray-500">Pending Review</p>
+            <p className="text-2xl font-black text-amber-600 mt-1">{loading ? "…" : orders.filter((o) => o.status === "PLACED").length}</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="p-10 text-center text-gray-400">Loading…</div>
+        ) : orders.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 bg-white border rounded-xl">No orders placed today yet.</div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b text-gray-500 uppercase tracking-wide">
+                  <tr>
+                    {["Order ID", "Customer", "Branch", "Amount", "Status", "Time"].map((h) => (
+                      <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.map((o) => (
+                    <tr key={o.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 font-mono text-gray-400">{o.id?.slice(0, 12)}…</td>
+                      <td className="px-4 py-3 text-gray-700">{o.customers?.full_name || "—"}</td>
+                      <td className="px-4 py-3 text-gray-600">{o.branches?.branch_name || "—"}</td>
+                      <td className="px-4 py-3 font-semibold">₹{o.total_amount || 0}</td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold ${statusColor[o.status] || "bg-gray-100 text-gray-600"}`}>
+                          {o.status}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-gray-500">{o.created_at ? new Date(o.created_at).toLocaleTimeString() : "—"}</td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan="5"
-                      className="py-6 text-center text-gray-500"
-                    >
-                      No orders placed today.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </main>
       <Footer />
     </div>

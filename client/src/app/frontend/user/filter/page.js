@@ -23,10 +23,10 @@ function FilterContent() {
         return;
       }
       try {
-        const res = await fetch(`${API_BASE_URL}/inventory?branchId=${branchId}`);
+        const res = await fetch(`${API_BASE_URL}/branches/${branchId}/medicines`);
         const data = await res.json();
         if (data.success) {
-          setInventory(data.inventory || []);
+          setInventory(data.medicines || []);
         }
       } catch (err) {
         console.error("Failed to load inventory", err);
@@ -38,7 +38,7 @@ function FilterContent() {
   }, [branchId]);
 
   const filteredItems = inventory.filter((item) =>
-    (item.medicine_name || item.medicines1?.medicine_name || "")
+    (item.medicines1?.medicine_name || item.medicine_name || "")
       .toLowerCase()
       .includes(filterQuery.toLowerCase())
   );

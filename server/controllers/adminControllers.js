@@ -20,7 +20,7 @@ exports.getDashboardStats = async (req, res) => {
         .select("*", { count: "exact", head: true }),
 
       supabase
-        .from("prescriptions")
+        .from("prescriptionss")
         .select("*", { count: "exact", head: true })
         .eq("status", "PENDING"),
 
@@ -128,20 +128,20 @@ exports.getPharmacistById = async (req, res) => {
 
     // Count total reviewed prescriptions
     const { count: totalReviewed } = await supabase
-      .from("prescriptions")
+      .from("prescriptionss")
       .select("*", { count: "exact", head: true })
       .eq("reviewed_by", id);
 
     // Count approved prescriptions
     const { count: approvedCount } = await supabase
-      .from("prescriptions")
+      .from("prescriptionss")
       .select("*", { count: "exact", head: true })
       .eq("reviewed_by", id)
       .eq("status", "APPROVED");
 
     // Count rejected prescriptions
     const { count: rejectedCount } = await supabase
-      .from("prescriptions")
+      .from("prescriptionss")
       .select("*", { count: "exact", head: true })
       .eq("reviewed_by", id)
       .eq("status", "REJECTED");

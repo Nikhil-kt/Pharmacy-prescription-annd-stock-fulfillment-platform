@@ -15,7 +15,13 @@ export default function OrderStatusPage() {
   useEffect(() => {
     async function fetchOrders() {
       try {
-        const res = await fetch(`${API_BASE_URL}/orders`);
+        const stored = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+        const user = stored ? JSON.parse(stored) : null;
+        const customerId = user?.id;
+        const url = customerId
+          ? `${API_BASE_URL}/orders?customer_id=${customerId}`
+          : `${API_BASE_URL}/orders`;
+        const res = await fetch(url);
         const data = await res.json();
         if (res.ok && data.success) {
           setOrders(data.orders || []);
