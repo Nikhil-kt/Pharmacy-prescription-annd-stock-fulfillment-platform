@@ -15,6 +15,10 @@ app.use(express.json());
 // Routes
 const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/admin", adminRoutes);
+const prescriptionRoutes = require('./routes/prescriptionRoutes'); // or whatever filename exists in /routes
+app.use("/api/prescriptions", prescriptionRoutes);
+const deliveryRoutes = require("./routes/deliveryRoutes");
+app.use("/api/delivery", deliveryRoutes);
 
 // Supabase Client
 const supabase = createClient(
@@ -151,6 +155,28 @@ app.post("/api/login", async (req, res) => {
         message: "User profile not found.",
       });
     }
+    router.get('/stats', async (req, res) => {
+  try {
+    // You can replace these static counts with real database queries later
+    const statsData = {
+      total: 12,
+      pending: 3,
+      inTransit: 4,
+      completed: 5,
+    };
+
+    return res.status(200).json({
+      success: true,
+      stats: statsData,
+    });
+  } catch (error) {
+    console.error('Error fetching delivery stats:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch delivery stats',
+    });
+  }
+});
 
     const userData = userDoc.data();
 
@@ -182,6 +208,182 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.get('/api/delivery/stats', (req, res) => {
+  res.status(200).json({
+    success: true,
+    stats: {
+      total: 10,
+      pending: 2,
+      inTransit: 3,
+      completed: 5,
+    },
+  });
+});
+// -----------------------------------------------------------------
+app.get('/api/prescription/unassigned', async (req, res) => {
+  try {
+    // Replace with Supabase query if connected:
+    // const { data, error } = await supabase.from('prescriptions').select('*').eq('status', 'unassigned');
+    res.json([
+      { id: 'ord_101', patient_name: 'John Doe', address: '123 Main St' },
+      { id: 'ord_102', patient_name: 'Sarah Connor', address: '456 Elm St' },
+    ]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------
+// 3. GET Delivery Partners
+// -----------------------------------------------------------------
+app.get('/api/delivery/partners', async (req, res) => {
+  try {
+    // Replace with Supabase query if connected:
+    // const { data, error } = await supabase.from('delivery_partners').select('*').eq('status', 'available');
+    res.json([
+      { id: 'driver_1', name: 'Alex Smith', phone: '555-0199' },
+      { id: 'driver_2', name: 'Maria Garcia', phone: '555-0188' },
+    ]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// -----------------------------------------------------------------
+// 4. POST Assign Delivery Partner
+// -----------------------------------------------------------------
+
+app.post('/api/delivery/assign', async (req, res) => {
+  try {
+    const { order_id, delivery_partner_id, notes, status } = req.body;
+
+    // Use passed status, or fallback to 'pending'
+    const validStatus = status || 'pending';
+
+    const { data, error } = await supabase
+      .from('deliveries')
+      .insert([
+        {
+          order_id,
+          delivery_partner_id,
+          notes,
+          status: validStatus,
+        },
+      ]);
+
+    if (error) throw error;
+
+    res.status(200).json({ success: true, message: 'Delivery assigned successfully!', data });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+app.post('/api/delivery/assign', async (req, res) => {
+  try {
+    const { order_id, delivery_partner_id, notes, status } = req.body;
+
+    // 1. Basic validation
+    if (!order_id || !delivery_partner_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'order_id and delivery_partner_id are required.',
+      });
+    }
+
+    // 2. Insert into Supabase
+    const { data, error } = await supabase
+      .from('deliveries')
+      .insert([
+        {
+          order_id,
+          delivery_partner_id,
+          notes: notes || '',
+          status: status || 'ASSIGNED', // Adjust casing if needed
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.error('Supabase Error:', error);
+      return res.status(400).json({ success: false, error: error.message });
+    }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.post('/api/delivery/assign', async (req, res) => {
+  try {
+    const { order_id, delivery_partner_id, notes, status } = req.body;
+
+    const { data, error } = await supabase
+      .from('deliveries')
+      .insert([
+        {
+          order_id,
+          delivery_partner_id,
+          notes: notes || '',
+          // Fallback status try
+          status: status || 'PENDING',
+        },
+      ])
+      .select();
+
+    if (error) {
+      // 🚨 THIS WILL PRINT THE EXACT POSTGRES CHECK CONSTRAINT DETAILS IN YOUR BACKEND TERMINAL
+      console.log('=== SUPABASE ERROR LOG ===');
+      console.log('Message:', error.message);
+      console.log('Details:', error.details);
+      console.log('Hint:', error.hint);
+      console.log('==========================');
+
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        details: error.details,
+      });
+    }
+
+    return res.status(200).json({ success: true, data });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+app.post('/api/delivery/assign', async (req, res) => {
+  try {
+    const { order_id, delivery_partner_id, notes } = req.body;
+
+    // Validate request body
+    if (!order_id || !delivery_partner_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'order_id and delivery_partner_id are required.',
+      });
+    }
+
+    // MOCK RESPONSE: Simulate database insertion
+    // (Comment out supabase.from('deliveries').insert() for now)
+    const mockAssignment = {
+      id: "del_test_999",
+      order_id,
+      delivery_partner_id,
+      notes: notes || '',
+      status: "ASSIGNED", // Mock status
+      created_at: new Date().toISOString()
+    };
+
+    console.log('✅ [DEV MOCK] Assigned order:', mockAssignment);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Delivery assigned successfully! (Mocked)',
+      data: mockAssignment,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 /* ==========================================================
    START SERVER
 ========================================================== */

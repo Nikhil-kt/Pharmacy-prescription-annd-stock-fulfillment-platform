@@ -1,18 +1,6 @@
 const supabase = require("../config/supabase");
 
-// exports.getDeliveries = async (req, res) => {
-//   const { data, error } = await supabase
 
-//     .from("delivery_assignments")
-
-//     .select("*");
-
-//   if (error) {
-//     return res.status(400).json(error);
-//   }
-
-//   res.json(data);
-// };
 
 exports.getDeliveries = async (req, res) => {
   try {
@@ -41,25 +29,7 @@ exports.getDeliveries = async (req, res) => {
   }
 };
 
-// exports.getDeliveryById = async (req, res) => {
-//   const { id } = req.params;
 
-//   const { data, error } = await supabase
-
-//     .from("delivery_assignments")
-
-//     .select("*")
-
-//     .eq("id", id)
-
-//     .single();
-
-//   if (error) {
-//     return res.status(404).json(error);
-//   }
-
-//   res.json(data);
-// };
 
 exports.getDeliveryById = async (req, res) => {
   try {
@@ -102,33 +72,7 @@ exports.getDeliveryById = async (req, res) => {
   }
 };
 
-// exports.assignDelivery = async (req, res) => {
-//   const {
-//     order_id,
 
-//     delivery_partner_id,
-//   } = req.body;
-
-//   const { data, error } = await supabase
-
-//     .from("delivery_assignments")
-
-//     .insert({
-//       order_id,
-
-//       delivery_partner_id,
-
-//       status: "ASSIGNED",
-//     })
-
-//     .select();
-
-//   if (error) {
-//     return res.status(400).json(error);
-//   }
-
-//   res.status(201).json(data);
-// };
 
 exports.assignDelivery = async (req, res) => {
   try {
@@ -175,23 +119,6 @@ exports.assignDelivery = async (req, res) => {
   }
 };
 
-// exports.pickupOrder = async (req, res) => {
-//   const { id } = req.params;
-
-//   await supabase
-
-//     .from("delivery_assignments")
-
-//     .update({
-//       status: "PICKED_UP",
-//     })
-
-//     .eq("id", id);
-
-//   res.json({
-//     message: "Order Picked Up",
-//   });
-// };
 
 exports.pickupOrder = async (req, res) => {
   try {
@@ -245,23 +172,7 @@ exports.pickupOrder = async (req, res) => {
   }
 };
 
-// exports.startDelivery = async (req, res) => {
-//   const { id } = req.params;
 
-//   await supabase
-
-//     .from("delivery_assignments")
-
-//     .update({
-//       status: "OUT_FOR_DELIVERY",
-//     })
-
-//     .eq("id", id);
-
-//   res.json({
-//     message: "Out For Delivery",
-//   });
-// };
 
 exports.startDelivery = async (req, res) => {
   try {
@@ -321,48 +232,7 @@ exports.startDelivery = async (req, res) => {
 };
 
 
-// exports.completeDelivery = async (req, res) => {
-//   const { id } = req.params;
 
-//   // Update delivery status
-//   await supabase
-
-//     .from("delivery_assignments")
-
-//     .update({
-//       status: "DELIVERED",
-//     })
-
-//     .eq("id", id);
-
-//   // Get order id
-//   const { data } = await supabase
-
-//     .from("delivery_assignments")
-
-//     .select("order_id")
-
-//     .eq("id", id)
-
-//     .single();
-
-//   // Update order status
-//   await supabase
-
-//     .from("orders")
-
-//     .update({
-//       status: "DELIVERED",
-//     })
-
-//     .eq("id", data.order_id);
-
-//   res.json({
-//     success: true,
-
-//     message: "Order Delivered",
-//   });
-// };
 
 exports.completeDelivery = async (req, res) => {
   try {
@@ -411,6 +281,68 @@ exports.completeDelivery = async (req, res) => {
       success: true,
       message: "Order delivered successfully.",
       delivery: data[0],
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
+
+exports.getDeliveryDashboard = async (req, res) => {
+  try {
+    const { partnerId } = req.params;
+
+    const { data, error } = await supabase
+      .from("deliveries")
+      .select(`
+        *,
+        orders (
+          id,
+          status,
+          total_amount,
+          customer_id,
+          created_at
+        )
+      `)
+      .eq("delivery_partner_id", partnerId)
+      .order("assigned_at", { ascending: false });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    const assignedOrders = data.filter(item =>
+      ["ASSIGNED", "PICKED_UP"].includes(item.status)
+    );
+
+    const currentDeliveries = data.filter(
+      item => item.status === "OUT_FOR_DELIVERY"
+    );
+
+    const completedDeliveries = data.filter(
+      item => item.status === "DELIVERED"
+    );
+
+    return res.status(200).json({
+      success: true,
+
+      statistics: {
+        totalAssigned: assignedOrders.length,
+        totalCurrent: currentDeliveries.length,
+        totalCompleted: completedDeliveries.length,
+      },
+
+      assignedOrders,
+
+      currentDeliveries,
+
+      completedDeliveries,
     });
 
   } catch (err) {

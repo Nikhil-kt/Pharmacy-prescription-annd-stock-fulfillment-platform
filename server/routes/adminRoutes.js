@@ -18,7 +18,6 @@ router.get("/prescription-logs", adminController.getPrescriptionLogs);
 
 module.exports = router;
 
-const router = express.Router();
 
 const {
   getDashboardStats,
