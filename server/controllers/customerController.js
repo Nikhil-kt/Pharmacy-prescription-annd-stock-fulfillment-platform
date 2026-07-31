@@ -148,7 +148,7 @@ exports.searchMedicines = async (req, res) => {
     });
   }
 };
-const supabase = require("../config/supabase");
+
 exports.getAllBranches = async (req, res) => {
   try {
     const { data, error } = await supabase

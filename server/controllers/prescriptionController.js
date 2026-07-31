@@ -16,7 +16,6 @@ export default function UploadPrescriptionPage() {
 
   const API_BASE_URL = "http://localhost:5000/api";
 
-  // Helper function to check valid UUID format
   const isValidUUID = (str) => {
     const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return regex.test(str);
@@ -82,12 +81,9 @@ export default function UploadPrescriptionPage() {
     setLoading(true);
     setMessage({ type: "", text: "" });
 
-    // 1. Get stored customer ID
     let customerId = typeof window !== "undefined" ? localStorage.getItem("customerId") : null;
 
-    // 2. Pure Frontend Fix: If ID missing or not UUID (e.g. "1"), convert to valid UUID
     if (!customerId || !isValidUUID(customerId)) {
-      // Use standard UUID v4 fallback or crypto.randomUUID()
       customerId = typeof window !== "undefined" && window.crypto?.randomUUID 
         ? window.crypto.randomUUID() 
         : "a0000000-0000-0000-0000-000000000001";
@@ -219,133 +215,3 @@ export default function UploadPrescriptionPage() {
     </div>
   );
 }
-exports.getPrescriptionById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { data, error } = await supabase
-      .from("prescriptionss")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      return res.status(404).json({
-        success: false,
-        error: "Prescription not found.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      prescription: data,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-};
-
-exports.approvePrescription = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { pharmacist_id, remarks } = req.body;
-
-    // Validate request
-    if (!pharmacist_id) {
-      return res.status(400).json({
-        success: false,
-        error: "pharmacist_id is required.",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("prescriptionss")
-      .update({
-        status: "APPROVED",
-        reviewed_by: pharmacist_id,
-        reviewed_at: new Date().toISOString(),
-        remarks: remarks || null,
-      })
-      .eq("id", id)
-      .select();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-
-    if (!data || data.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Prescription not found.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Prescription approved successfully.",
-      prescription: data[0],
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-};
-
-exports.rejectPrescription = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { pharmacist_id, remarks } = req.body;
-
-    if (!pharmacist_id) {
-      return res.status(400).json({
-        success: false,
-        error: "pharmacist_id is required.",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("prescriptionss")
-      .update({
-        status: "REJECTED",
-        reviewed_by: pharmacist_id,
-        reviewed_at: new Date().toISOString(),
-        remarks: remarks || null,
-      })
-      .eq("id", id)
-      .select();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-
-    if (!data || data.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Prescription not found.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Prescription rejected successfully.",
-      prescription: data[0],
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-};
-
