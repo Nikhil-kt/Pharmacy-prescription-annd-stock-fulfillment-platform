@@ -2,16 +2,15 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-// Route Imports
-const prescriptionRoutes = require("./routes/prescriptionRoutes");
-const deliveryRoutes = require("./routes/deliveryRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-
 // Supabase Connection
 const supabase = require("./config/supabase");
+
+// Route Imports
+const adminRoutes = require("./routes/adminRoutes");
+const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
 const inventorystockRoutes = require("./routes/InventorystockRoutes");
 const customerRoutes = require("./routes/customerRoutes");
-dotenv.config();
 
 const app = express();
 
@@ -36,7 +35,7 @@ const auth = getAuth();
 const db = getFirestore();
 
 /* ==========================================================
-   API ROUTES
+   SYSTEM / HEALTH CHECK ENDPOINTS
 ========================================================== */
 
 // Root Check
@@ -47,18 +46,11 @@ app.get("/", (req, res) => {
   });
 });
 
-// Mounted Modular Routes
-app.use("/api/admin", adminRoutes);
-app.use("/api/prescriptions", prescriptionRoutes);
-app.use("/api/delivery", deliveryRoutes);
-
-/* ==========================================================
-   SUPABASE DATABASE TEST
-========================================================== */
+// Supabase Database Test
 app.get("/api/test-db", async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from("medicines")
+      .from("medicines1")
       .select("*")
       .limit(5);
 
@@ -198,13 +190,17 @@ app.post("/api/login", async (req, res) => {
 });
 
 /* ==========================================================
-   START SERVER
+   MOUNT API ROUTERS
 ========================================================== */
 app.use("/api/admin", adminRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/delivery", deliveryRoutes);
 app.use("/api/inventory", inventorystockRoutes);
-
 app.use("/api/customer", customerRoutes);
 
+/* ==========================================================
+   START SERVER
+========================================================== */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

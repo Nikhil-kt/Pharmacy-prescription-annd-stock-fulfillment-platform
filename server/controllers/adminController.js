@@ -88,12 +88,12 @@ const getBranchPerformance = async (req, res) => {
 
     const { data: orders, error: orderErr } = await supabase
       .from("orders")
-      .select("branch_id, total_amount, status");
+      .select("branches_id, total_amount, status");
 
     if (orderErr) throw orderErr;
 
     const performance = (branches || []).map((branch) => {
-      const branchOrders = (orders || []).filter((o) => o.branch_id === branch.id);
+      const branchOrders = (orders || []).filter((o) => o.branches_id === branch.id);
       const totalRevenue = branchOrders.reduce(
         (sum, o) => sum + Number(o.total_amount || 0),
         0
@@ -159,8 +159,8 @@ const getTodaysOrders = async (req, res) => {
         status,
         total_amount,
         created_at,
-        branches:branches(branches_id, branch_name ),
-        customers:customers(customer_id, full_name, email, phone )
+        branches:branches_id ( id, branch_name ),
+        customers:customer_id ( id, full_name, email, phone )
       `)
       .gte("created_at", startOfDay.toISOString())
       .order("created_at", { ascending: false });
@@ -216,21 +216,21 @@ const getExportBranchPerformance = async (req, res) => {
 
     const { data: orders, error: orderErr } = await supabase
       .from("orders")
-      .select("branch_id, total_amount, status");
+      .select("branches_id, total_amount, status");
 
     if (orderErr) throw orderErr;
 
     const report = (branches || []).map((branch) => {
-      const branchOrders = (orders || []).filter((o) => o.branch_id === branch.id);
+      const branchOrders = (orders || []).filter((o) => o.branches_id === branch.id);
       const totalRevenue = branchOrders.reduce(
         (sum, o) => sum + Number(o.total_amount || 0),
         0
       );
       const completedOrders = branchOrders.filter(
-        (o) => o.status === "completed" || o.status === "delivered"
+        (o) => o.status === "DELIVERED"
       ).length;
       const cancelledOrders = branchOrders.filter(
-        (o) => o.status === "cancelled"
+        (o) => o.status === "CANCELLED" || o.status === "REJECTED"
       ).length;
 
       return {
@@ -261,8 +261,8 @@ const getManualOrders = async (req, res) => {
         status,
         total_amount,
         created_at,
-        users:customer_id ( id, full_name, email, phone ),
-        branches:branch_id ( id, branch_name, city ),
+        customers:customer_id ( id, full_name, email, phone ),
+        branches:branches_id ( id, branch_name, city ),
         order_items (
           id,
           quantity,
@@ -327,14 +327,14 @@ const getStockRelatedFailures = async (req, res) => {
         id,
         created_at,
         status,
-        branches:branch_id ( branch_name ),
+        branches:branches_id ( branch_name ),
         order_items (
           medicine_id,
           quantity,
           medicines:medicine_id ( name )
         )
       `)
-      .eq("status", "cancelled");
+      .in("status", ["CANCELLED", "REJECTED"]);
 
     if (orderErr) throw orderErr;
 
@@ -373,10 +373,10 @@ const getPendingOrders = async (req, res) => {
         total_amount,
         status,
         created_at,
-        users:customer_id ( id, full_name, email, phone ),
-        branches:branch_id ( id, branch_name )
+        customers:customer_id ( id, full_name, email, phone ),
+        branches:branches_id ( id, branch_name )
       `)
-      .eq("status", "pending")
+      .in("status", ["PLACED", "PRESCRIPTION_PENDING"])
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -419,9 +419,6 @@ const getAllPharmacists = async (req, res) => {
   }
 };
 
-// TRACK STOCK-RELATED ORDER FAILURES
-
-
 // 13. GET ALL DELIVERY PARTNERS
 const getAllDeliveryPartners = async (req, res) => {
   try {
@@ -448,7 +445,37 @@ const getAllDeliveryPartners = async (req, res) => {
   }
 };
 
+// ADD THIS FUNCTION TO YOUR CONTROLLER
+const getDashboardStats = async (req, res) => {
+  try {
+    const { count: medicinesCount } = await supabase
+      .from("medicines1")
+      .select("*", { count: "exact", head: true });
+
+    const { count: ordersCount } = await supabase
+      .from("orders")
+      .select("*", { count: "exact", head: true });
+
+    const { count: branchesCount } = await supabase
+      .from("branches")
+      .select("*", { count: "exact", head: true });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        medicinesCount: medicinesCount || 0,
+        ordersCount: ordersCount || 0,
+        branchesCount: branchesCount || 0,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching dashboard stats:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
+  getDashboardStats,
   getTopSellingMedicines,
   getLowStockReport,
   getBranchPerformance,

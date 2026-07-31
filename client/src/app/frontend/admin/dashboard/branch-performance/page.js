@@ -13,7 +13,7 @@ export default function BranchPerformancePage() {
     async function fetchReport() {
       try {
         const res = await fetch(
-          "http://localhost:5000/api/admin/branch-performance-report"
+          "http://localhost:5000/api/admin/branch-performance"
         );
         const result = await res.json();
         if (result.success) setData(result.data || []);
@@ -41,13 +41,13 @@ export default function BranchPerformancePage() {
     ];
 
     const rows = data.map((item) => [
-      `"${item.branch_id}"`,
-      `"${item.branch_name}"`,
-      `"${item.address}"`,
-      item.total_orders,
-      item.completed_orders,
-      item.cancelled_orders,
-      item.total_revenue,
+      `"${item.branchId || item.branch_id || ""}"`,
+      `"${item.branchName || item.branch_name || ""}"`,
+      `"${item.address || ""}"`,
+      item.totalOrders ?? item.total_orders ?? 0,
+      item.completedOrders ?? item.completed_orders ?? 0,
+      item.cancelledOrders ?? item.cancelled_orders ?? 0,
+      item.totalRevenue ?? item.total_revenue ?? 0,
     ]);
 
     const csvContent =
@@ -123,28 +123,28 @@ export default function BranchPerformancePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {data.map((row) => (
+                  {data.map((row, index) => (
                     <tr
-                      key={row.branch_id}
+                      key={row.branchId || row.branch_id || row.id || index}
                       className="hover:bg-gray-50/80 transition-colors"
                     >
                       <td className="px-6 py-4 font-semibold text-gray-900">
-                        {row.branch_name}
+                        {row.branchName || row.branch_name || "N/A"}
                       </td>
                       <td className="px-6 py-4 text-gray-600 max-w-xs truncate">
-                        {row.address}
+                        {row.address || "N/A"}
                       </td>
                       <td className="px-6 py-4 text-center font-mono text-gray-700">
-                        {row.total_orders}
+                        {row.totalOrders ?? row.total_orders ?? 0}
                       </td>
                       <td className="px-6 py-4 text-center font-mono text-emerald-600 font-medium">
-                        {row.completed_orders}
+                        {row.completedOrders ?? row.completed_orders ?? 0}
                       </td>
                       <td className="px-6 py-4 text-center font-mono text-rose-600 font-medium">
-                        {row.cancelled_orders}
+                        {row.cancelledOrders ?? row.cancelled_orders ?? 0}
                       </td>
                       <td className="px-6 py-4 text-right font-mono font-bold text-[#0E7C50]">
-                        ₹{row.total_revenue.toLocaleString("en-IN")}
+                        ₹{(row.totalRevenue ?? row.total_revenue ?? 0).toLocaleString("en-IN")}
                       </td>
                     </tr>
                   ))}
