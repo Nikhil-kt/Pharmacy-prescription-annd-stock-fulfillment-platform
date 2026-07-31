@@ -1,40 +1,5 @@
 const supabase = require("../config/supabase");
 
-// exports.uploadPrescription = async (req, res) => {
-//   try {
-//     const { order_id, customer_id, image_url } = req.body;
-
-//     const { data, error } = await supabase
-//       .from("prescriptions")
-//       .insert([
-//         {
-//           order_id,
-//           customer_id,
-//           image_url,
-//           status: "PENDING",
-//         },
-//       ])
-//       .select();
-
-//     if (error)
-//       return res.status(400).json({
-//         success: false,
-//         error: error.message,
-//       });
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Prescription Uploaded Successfully",
-//       prescription: data,
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       error: err.message,
-//     });
-//   }
-// };
-
 exports.uploadPrescription = async (req, res) => {
   try {
     const { customer_id, image_url } = req.body;
@@ -78,13 +43,6 @@ exports.uploadPrescription = async (req, res) => {
   }
 };
 
-// exports.getAllPrescriptions = async (req, res) => {
-//   const { data, error } = await supabase.from("prescriptions").select("*");
-//   if (error) {
-//     return res.status(400).json(error);
-//   }
-//   res.json(data);
-// };
 exports.getAllPrescriptions = async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -111,19 +69,6 @@ exports.getAllPrescriptions = async (req, res) => {
     });
   }
 };
-
-// exports.getPendingPrescriptions = async (req, res) => {
-//   const { data, error } = await supabase
-//     .from("prescriptionss")
-
-//     .select("*")
-
-//     .eq("status", "PENDING");
-//   if (error) {
-//     return res.status(400).json(error);
-//   }
-//   res.json(data);
-// };
 
 exports.getPendingPrescriptions = async (req, res) => {
   try {
@@ -152,27 +97,6 @@ exports.getPendingPrescriptions = async (req, res) => {
     });
   }
 };
-
-
-// exports.getPrescriptionById = async (req, res) => {
-//   const { id } = req.params;
-
-//   const { data, error } = await supabase
-
-//     .from("prescriptions")
-
-//     .select("*")
-
-//     .eq("id", id)
-
-//     .single();
-
-//   if (error) {
-//     return res.status(404).json(error);
-//   }
-
-//   res.json(data);
-// };
 
 exports.getPrescriptionById = async (req, res) => {
   try {
@@ -203,41 +127,6 @@ exports.getPrescriptionById = async (req, res) => {
   }
 };
 
-// exports.approvePrescription = async (req, res) => {
-//   const { id } = req.params;
-
-//   const { pharmacist_id, remarks } = req.body;
-
-//   await supabase
-
-//     .from("prescriptions")
-
-//     .update({
-//       status: "APPROVED",
-//     })
-
-//     .eq("id", id);
-
-//   await supabase
-
-//     .from("prescription_reviews")
-
-//     .insert({
-//       prescription_id: id,
-
-//       pharmacist_id,
-
-//       status: "APPROVED",
-
-//       remarks,
-//     });
-
-//   res.json({
-//     success: true,
-
-//     message: "Prescription Approved",
-//   });
-// };
 exports.approvePrescription = async (req, res) => {
   try {
     const { id } = req.params;
@@ -289,43 +178,6 @@ exports.approvePrescription = async (req, res) => {
   }
 };
 
-
-// exports.rejectPrescription = async (req, res) => {
-//   const { id } = req.params;
-
-//   const { pharmacist_id, remarks } = req.body;
-
-//   await supabase
-
-//     .from("prescriptions")
-
-//     .update({
-//       status: "REJECTED",
-//     })
-
-//     .eq("id", id);
-
-//   await supabase
-
-//     .from("prescription_reviews")
-
-//     .insert({
-//       prescription_id: id,
-
-//       pharmacist_id,
-
-//       status: "REJECTED",
-
-//       remarks,
-//     });
-
-//   res.json({
-//     success: true,
-
-//     message: "Prescription Rejected",
-//   });
-// };
-
 exports.rejectPrescription = async (req, res) => {
   try {
     const { id } = req.params;
@@ -375,3 +227,4 @@ exports.rejectPrescription = async (req, res) => {
     });
   }
 };
+

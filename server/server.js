@@ -9,6 +9,9 @@ const adminRoutes = require("./routes/adminRoutes");
 
 // Supabase Connection
 const supabase = require("./config/supabase");
+const inventorystockRoutes = require("./routes/InventorystockRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+dotenv.config();
 
 const app = express();
 
@@ -197,6 +200,11 @@ app.post("/api/login", async (req, res) => {
 /* ==========================================================
    START SERVER
 ========================================================== */
+app.use("/api/admin", adminRoutes);
+app.use("/api/inventory", inventorystockRoutes);
+
+app.use("/api/customer", customerRoutes);
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
