@@ -4,6 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "../../../../components/Navbar";
 import Footer from "../../../../components/footer";
 
+// Point directly to Express port 5000 (or use your env variable)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+
 export default function StockFailurePage() {
   const [failures, setFailures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +30,7 @@ export default function StockFailurePage() {
       order_id: 1089,
       branch_name: "Indiranagar Hub",
       city: "Bengaluru",
-failed_at: new Date(new Date().getTime() - 3600000).toISOString(),
+      failed_at: new Date(new Date().getTime() - 3600000).toISOString(),
       cancellation_reason: "Out of Stock",
       items: [
         { medicine_name: "Metformin 500mg", requested_quantity: 10 }
@@ -39,12 +42,11 @@ failed_at: new Date(new Date().getTime() - 3600000).toISOString(),
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/admin/stock-failures");
+      const response = await fetch(`${API_BASE_URL}/api/admin/stock-failure`);
 
-      // Verify that the response is JSON to avoid DOCTYPE HTML parsing errors
       const contentType = response.headers.get("content-type");
       if (!response.ok || !contentType || !contentType.includes("application/json")) {
-        throw new Error(`Server returned status ${response.status} (${response.statusText}) instead of JSON.`);
+        throw new Error(`Server returned status ${response.status} (${response.statusText}).`);
       }
 
       const result = await response.json();
@@ -63,42 +65,35 @@ failed_at: new Date(new Date().getTime() - 3600000).toISOString(),
     }
   }, []);
 
-useEffect(() => {
+ useEffect(() => {
   const fetchStockFailures = async () => {
-    setLoading(true);
-    setError(null);
     try {
-      const response = await fetch("/api/admin/stock-failures");
-      const result = await response.json();
-
-      if (result.success) {
-        setFailures(result.data || []);
-      } else {
-        throw new Error(result.message || "Failed to fetch stock failures.");
-      }
-    } catch (err) {
-      console.warn("API call failed:", err.message);
-    } finally {
-      setLoading(false);
+const response = await fetch("http://localhost:5000/api/admin/stock-failure");     
+ const data = await response.json();
+      // setStockFailures(data);
+    } catch (error) {
+      console.error(error);
     }
   };
 
   fetchStockFailures();
-}, []); // No dependencies needed
+}, []); // Empty dependency array because the function is scoped inside
 
-  // Unique branches for filter dropdown
+  // Handle branch property names from backend ('branch' vs 'branch_name')
   const uniqueBranches = Array.from(
-    new Set(failures.map((item) => item.branch_name).filter(Boolean))
+    new Set(failures.map((item) => item.branch_name || item.branch).filter(Boolean))
   );
 
   // Filtered list based on branch & search term
   const filteredFailures = failures.filter((failure) => {
+    const branchName = failure.branch_name || failure.branch || "";
+
     const matchesBranch =
-      selectedBranch === "ALL" || failure.branch_name === selectedBranch;
+      selectedBranch === "ALL" || branchName === selectedBranch;
 
     const matchesSearch =
       failure.order_id?.toString().includes(searchTerm) ||
-      failure.branch_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      branchName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       failure.items?.some((item) =>
         item.medicine_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -108,12 +103,9 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-800">
-      {/* Reusable Navbar */}
       <Navbar />
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Banner */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-6 border-b border-gray-200 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -134,7 +126,6 @@ useEffect(() => {
           </button>
         </div>
 
-        {/* Filters and Search Bar */}
         <div className="flex flex-col md:flex-row gap-4 my-6">
           <div className="relative flex-1">
             <input
@@ -161,21 +152,18 @@ useEffect(() => {
           </select>
         </div>
 
-        {/* Loading State */}
         {loading && (
           <div className="p-12 text-center text-emerald-700 font-medium bg-white rounded-xl shadow-sm border border-gray-200 animate-pulse">
             Loading failure log...
           </div>
         )}
 
-        {/* Error State Banner (Shows API warning while using fallback) */}
         {error && !loading && (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm mb-6 flex items-center justify-between">
             <span>⚠️ API Warning: {error} (Displaying local preview data).</span>
           </div>
         )}
 
-        {/* Main Failures Table */}
         {!loading && (
           <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -191,34 +179,30 @@ useEffect(() => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredFailures.length > 0 ? (
-                    filteredFailures.map((failure) => (
+                    filteredFailures.map((failure, idx) => (
                       <tr
-                        key={failure.order_id}
+                        key={failure.order_id || idx}
                         className="hover:bg-emerald-50/40 transition-colors"
                       >
-                        {/* Order ID */}
                         <td className="px-6 py-4 font-mono font-bold text-emerald-600">
                           #{failure.order_id}
                         </td>
 
-                        {/* Branch Info */}
                         <td className="px-6 py-4">
                           <div className="font-semibold text-gray-900">
-                            {failure.branch_name || "N/A"}
+                            {failure.branch_name || failure.branch || "N/A"}
                           </div>
                           <div className="text-xs text-gray-500">
                             {failure.city || "N/A"}
                           </div>
                         </td>
 
-                        {/* Date */}
                         <td className="px-6 py-4 text-xs text-gray-500">
-                          {failure.failed_at
-                            ? new Date(failure.failed_at).toLocaleString()
+                          {failure.failed_at || failure.cancelled_at
+                            ? new Date(failure.failed_at || failure.cancelled_at).toLocaleString()
                             : "N/A"}
                         </td>
 
-                        {/* Out-of-Stock Items */}
                         <td className="px-6 py-4">
                           <div className="space-y-1.5">
                             {failure.items?.map((item, i) => (
@@ -237,7 +221,6 @@ useEffect(() => {
                           </div>
                         </td>
 
-                        {/* Cancellation Reason Badge */}
                         <td className="px-6 py-4">
                           <span className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-200 rounded-md text-xs font-semibold">
                             {failure.cancellation_reason || "Insufficient Stock"}
@@ -262,7 +245,6 @@ useEffect(() => {
         )}
       </main>
 
-      {/* Reusable Footer */}
       <Footer />
     </div>
   );
