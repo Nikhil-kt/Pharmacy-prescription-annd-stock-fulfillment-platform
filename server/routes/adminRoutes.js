@@ -1,17 +1,13 @@
 const express = require("express");
 const router = express.Router();
-
 const adminController = require("../controllers/adminController");
 
-const {
-  getTopSellingMedicines,
-  getLowStockReport,
-  getBranchPerformance,
-} = require("../controllers/adminController");
-
-router.get("/top-selling-medicines", getTopSellingMedicines);
-router.get("/low-stock-report", getLowStockReport);
-router.get("/branch-performance", getBranchPerformance);
+// Dashboard & Stats
+router.get("/dashboard", adminController.getDashboardStats);
+router.get("/top-selling-medicines", adminController.getTopSellingMedicines);
+router.get("/low-stock-report", adminController.getLowStockReport);
+router.get("/branch-performance", adminController.getBranchPerformance);
+router.get("/export-branch-performance", adminController.getExportBranchPerformance);
 router.get("/branch-stock-alerts", adminController.getBranchStockAlerts);
 router.get("/todays-orders", adminController.getTodaysOrders);
 router.get("/prescription-logs", adminController.getPrescriptionLogs);

@@ -14,7 +14,7 @@ export default function StockAlertsPage() {
       try {
         const res = await fetch("http://localhost:5000/api/admin/branch-stock-alerts");
         const data = await res.json();
-        if (data.success) setAlerts(data.data);
+        if (data.success) setAlerts(data.data || []);
       } catch (err) {
         console.error("Error fetching branch stock alerts:", err);
       } finally {
@@ -49,6 +49,7 @@ export default function StockAlertsPage() {
                   <th className="py-3 px-4 font-semibold">Branch</th>
                   <th className="py-3 px-4 font-semibold">Medicine Name</th>
                   <th className="py-3 px-4 font-semibold">Current Stock</th>
+                  <th className="py-3 px-4 font-semibold">Threshold</th>
                   <th className="py-3 px-4 font-semibold">Alert Severity</th>
                 </tr>
               </thead>
@@ -56,9 +57,18 @@ export default function StockAlertsPage() {
                 {alerts.length > 0 ? (
                   alerts.map((alert, idx) => (
                     <tr key={alert.id || idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">{alert.branch_name || "Main Branch"}</td>
-                      <td className="py-3 px-4">{alert.medicine_name || "Paracetamol"}</td>
-                      <td className="py-3 px-4 font-bold text-red-600">{alert.stock || 0} left</td>
+                      <td className="py-3 px-4 font-medium text-gray-900">
+                        {alert.branch?.name || "Main Branch"}
+                      </td>
+                      <td className="py-3 px-4">
+                        {alert.medicines?.name || "Medicine Item"}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-red-600">
+                        {alert.quantity || 0} left
+                      </td>
+                      <td className="py-3 px-4 text-gray-500">
+                        {alert.low_stock_threshold || 0}
+                      </td>
                       <td className="py-3 px-4">
                         <span className="px-2.5 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded-full border border-red-200">
                           Critical Low
@@ -68,7 +78,7 @@ export default function StockAlertsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="py-6 text-center text-gray-500">No branch stock alerts active.</td>
+                    <td colSpan="5" className="py-6 text-center text-gray-500">No branch stock alerts active.</td>
                   </tr>
                 )}
               </tbody>

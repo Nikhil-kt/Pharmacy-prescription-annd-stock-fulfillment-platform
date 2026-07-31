@@ -22,3 +22,4 @@ router.get("/medicines/:medicineId", getMedicineDetails);
 router.get("/search", searchMedicines);
 
 module.exports = router;
+module.exports = router;

@@ -1,10 +1,16 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
 
-dotenv.config();
+// Supabase Connection
+const supabase = require("./config/supabase");
+
+// Route Imports
+const adminRoutes = require("./routes/adminRoutes");
+const prescriptionRoutes = require("./routes/prescriptionRoutes");
+const deliveryRoutes = require("./routes/deliveryRoutes");
+const inventorystockRoutes = require("./routes/InventorystockRoutes");
+const customerRoutes = require("./routes/customerRoutes");
 
 const app = express();
 
@@ -13,24 +19,38 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-const customerRoutes = require("./routes/customerRoutes");
-
-// Mount the router under /api/customer
-app.use("/api/customer", customerRoutes);
 const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/admin", adminRoutes);
-const prescriptionRoutes = require('./routes/prescriptionRoutes'); // or whatever filename exists in /routes
-app.use("/api/prescriptions", prescriptionRoutes);
-const deliveryRoutes = require("./routes/deliveryRoutes");
-app.use("/api/delivery", deliveryRoutes);
 
 // Supabase Client
+
+const supabase = require("./config/supabase");
+
+/* ==========================================================
+   FIREBASE ADMIN INITIALIZATION
+========================================================== */
+
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
+
+const serviceAccount = require("./serviceAccountKey.json");
+
+initializeApp({
+  credential: cert(serviceAccount),
+});
+
+const auth = getAuth();
+const db = getFirestore();
+
+/* ==========================================================
+   ROOT ROUTE
+========================================================== */
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
-// Test Route
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -49,7 +69,7 @@ app.use("/api/admin", adminRoutes);
 app.get("/api/test-db", async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from("medicines")
+      .from("medicines1")
       .select("*")
       .limit(5);
 
@@ -73,9 +93,10 @@ app.get("/api/test-db", async (req, res) => {
 });
 
 /* ==========================================================
-   FIREBASE SIGNUP
+   FIREBASE AUTHENTICATION ENDPOINTS
 ========================================================== */
 
+// Signup
 app.post("/api/signup", async (req, res) => {
   try {
     const { fullName, email, password, role } = req.body;
@@ -122,10 +143,7 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-/* ==========================================================
-   FIREBASE LOGIN
-========================================================== */
-
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { role, email, password } = req.body;
@@ -211,6 +229,24 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
+
+/* ==========================================================
+   MOUNT API ROUTERS
+========================================================== */
+app.use("/api/admin", adminRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/delivery", deliveryRoutes);
+app.use("/api/inventory", inventorystockRoutes);
+app.use("/api/customer", customerRoutes);
+
+/* ==========================================================
+   MOUNT API ROUTERS
+========================================================== */
+app.use("/api/admin", adminRoutes);
+app.use("/api/prescriptions", prescriptionRoutes);
+app.use("/api/delivery", deliveryRoutes);
+app.use("/api/inventory", inventorystockRoutes);
+app.use("/api/customer", customerRoutes);
 
 app.get('/api/delivery/stats', (req, res) => {
   res.status(200).json({
@@ -391,7 +427,6 @@ app.post('/api/delivery/assign', async (req, res) => {
 /* ==========================================================
    START SERVER
 ========================================================== */
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
