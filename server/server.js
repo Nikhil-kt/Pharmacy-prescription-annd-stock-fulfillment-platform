@@ -13,6 +13,10 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+const customerRoutes = require("./routes/customerRoutes");
+
+// Mount the router under /api/customer
+app.use("/api/customer", customerRoutes);
 const adminRoutes = require("./routes/adminRoutes");
 app.use("/api/admin", adminRoutes);
 const prescriptionRoutes = require('./routes/prescriptionRoutes'); // or whatever filename exists in /routes
