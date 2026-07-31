@@ -1,13 +1,14 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 
-const { createClient } = require("@supabase/supabase-js");
+// Route Imports
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
-dotenv.config();
+
+// Supabase Connection
+const supabase = require("./config/supabase");
 
 const app = express();
 
@@ -15,22 +16,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Supabase Client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
-// Routes
-const adminRoutes = require("./routes/adminRoutes");
-app.use("/api/admin", adminRoutes);
-
-// Supabase Client
-const supabase = require("./config/supabase");
-
 /* ==========================================================
    FIREBASE ADMIN INITIALIZATION
 ========================================================== */
-
 const { initializeApp, cert } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore } = require("firebase-admin/firestore");
@@ -45,9 +33,10 @@ const auth = getAuth();
 const db = getFirestore();
 
 /* ==========================================================
-   ROOT ROUTE
+   API ROUTES
 ========================================================== */
 
+// Root Check
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -55,15 +44,14 @@ app.get("/", (req, res) => {
   });
 });
 
+// Mounted Modular Routes
+app.use("/api/admin", adminRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/delivery", deliveryRoutes);
-app.use("/api/admin", adminRoutes);
 
-// Test Database Connection
 /* ==========================================================
    SUPABASE DATABASE TEST
 ========================================================== */
-
 app.get("/api/test-db", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -91,9 +79,10 @@ app.get("/api/test-db", async (req, res) => {
 });
 
 /* ==========================================================
-   FIREBASE SIGNUP
+   FIREBASE AUTHENTICATION ENDPOINTS
 ========================================================== */
 
+// Signup
 app.post("/api/signup", async (req, res) => {
   try {
     const { fullName, email, password, role } = req.body;
@@ -140,10 +129,7 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-/* ==========================================================
-   FIREBASE LOGIN
-========================================================== */
-
+// Login
 app.post("/api/login", async (req, res) => {
   try {
     const { role, email, password } = req.body;
@@ -211,7 +197,6 @@ app.post("/api/login", async (req, res) => {
 /* ==========================================================
    START SERVER
 ========================================================== */
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

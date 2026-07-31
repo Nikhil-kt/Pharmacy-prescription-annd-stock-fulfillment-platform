@@ -14,7 +14,7 @@ export default function PrescriptionLogsPage() {
       try {
         const res = await fetch("http://localhost:5000/api/admin/prescription-logs");
         const data = await res.json();
-        if (data.success) setLogs(data.data);
+        if (data.success) setLogs(data.data || []);
       } catch (err) {
         console.error("Error fetching prescription logs:", err);
       } finally {
@@ -47,7 +47,7 @@ export default function PrescriptionLogsPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase tracking-wider">
                   <th className="py-3 px-4 font-semibold">Prescription ID</th>
-                  <th className="py-3 px-4 font-semibold">Verified By</th>
+                  <th className="py-3 px-4 font-semibold">Reviewed By</th>
                   <th className="py-3 px-4 font-semibold">Status</th>
                   <th className="py-3 px-4 font-semibold">Timestamp</th>
                 </tr>
@@ -56,18 +56,24 @@ export default function PrescriptionLogsPage() {
                 {logs.length > 0 ? (
                   logs.map((log, idx) => (
                     <tr key={log.id || idx} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">#{log.prescription_id || log.id}</td>
-                      <td className="py-3 px-4 text-gray-600">{log.verified_by || "Pharmacist"}</td>
+                      <td className="py-3 px-4 font-medium text-gray-900">
+                        #{log.prescriptions?.id || log.id}
+                      </td>
+                      <td className="py-3 px-4 text-gray-600">
+                        {log.pharmacists?.full_name || log.pharmacists?.email || "Pharmacist"}
+                      </td>
                       <td className="py-3 px-4">
                         <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
-                          log.status === "Approved" ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"
+                          log.status === "approved" || log.status === "Approved"
+                            ? "bg-green-50 text-green-700 border-green-200" 
+                            : "bg-red-50 text-red-700 border-red-200"
                         }`}>
                           {log.status || "Verified"}
                         </span>
                       </td>
-                     <td className="py-3 px-4 text-gray-500 text-xs">
-  {log.created_at ? new Date(log.created_at).toLocaleString() : "N/A"}
-</td>
+                      <td className="py-3 px-4 text-gray-500 text-xs">
+                        {log.reviewed_at ? new Date(log.reviewed_at).toLocaleString() : "N/A"}
+                      </td>
                     </tr>
                   ))
                 ) : (

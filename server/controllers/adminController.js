@@ -1,7 +1,7 @@
 const supabase = require("../config/supabase");
 
 // 1. TOP-SELLING MEDICINES
-exports.getTopSellingMedicines = async (req, res) => {
+const getTopSellingMedicines = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("order_items")
@@ -18,10 +18,13 @@ exports.getTopSellingMedicines = async (req, res) => {
     if (error) throw error;
 
     const salesMap = {};
-    data.forEach((item) => {
-      const medId = item.medicines?.id || "unknown";
-      const medName = item.medicines?.name || "Unknown Medicine";
-      const category = item.medicines?.category || "General";
+    (data || []).forEach((item) => {
+      const med = Array.isArray(item.medicines) ? item.medicines[0] : item.medicines;
+      const medId = med?.id || "unknown";
+      const medName = med?.name || "Unknown Medicine";
+      const category = med?.category || "General";
+      const quantity = Number(item.quantity || 0);
+      const price = Number(item.price || 0);
 
       if (!salesMap[medId]) {
         salesMap[medId] = {
@@ -32,8 +35,8 @@ exports.getTopSellingMedicines = async (req, res) => {
           revenue: 0,
         };
       }
-      salesMap[medId].totalSold += item.quantity;
-      salesMap[medId].revenue += item.quantity * item.price;
+      salesMap[medId].totalSold += quantity;
+      salesMap[medId].revenue += quantity * price;
     });
 
     const topSelling = Object.values(salesMap)
@@ -48,7 +51,7 @@ exports.getTopSellingMedicines = async (req, res) => {
 };
 
 // 2. DISPLAY LOW STOCK REPORT
-exports.getLowStockReport = async (req, res) => {
+const getLowStockReport = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("branch_stock")
@@ -57,14 +60,14 @@ exports.getLowStockReport = async (req, res) => {
         quantity,
         low_stock_threshold,
         updated_at,
-        branches:branch_id ( id, name ),
-        medicines:medicine_id ( id, name, category )
+        branches:branch_id ( id, branch_name, address, city ),
+        medicines:medicine_id ( id, name, category, price )
       `);
 
     if (error) throw error;
 
-    const lowStockItems = data.filter(
-      (item) => item.quantity <= item.low_stock_threshold
+    const lowStockItems = (data || []).filter(
+      (item) => Number(item.quantity) <= Number(item.low_stock_threshold)
     );
 
     return res.status(200).json({ success: true, data: lowStockItems });
@@ -75,11 +78,11 @@ exports.getLowStockReport = async (req, res) => {
 };
 
 // 3. SHOW BRANCH PERFORMANCE METRICS
-exports.getBranchPerformance = async (req, res) => {
+const getBranchPerformance = async (req, res) => {
   try {
     const { data: branches, error: branchErr } = await supabase
       .from("branches")
-      .select("id, name");
+      .select("id, branch_name, city");
 
     if (branchErr) throw branchErr;
 
@@ -89,8 +92,8 @@ exports.getBranchPerformance = async (req, res) => {
 
     if (orderErr) throw orderErr;
 
-    const performance = branches.map((branch) => {
-      const branchOrders = orders.filter((o) => o.branch_id === branch.id);
+    const performance = (branches || []).map((branch) => {
+      const branchOrders = (orders || []).filter((o) => o.branch_id === branch.id);
       const totalRevenue = branchOrders.reduce(
         (sum, o) => sum + Number(o.total_amount || 0),
         0
@@ -98,7 +101,8 @@ exports.getBranchPerformance = async (req, res) => {
 
       return {
         branchId: branch.id,
-        branchName: branch.name,
+        branchName: branch.branch_name || "Unknown Branch",
+        city: branch.city || "N/A",
         totalOrders: branchOrders.length,
         totalRevenue: totalRevenue,
       };
@@ -112,7 +116,7 @@ exports.getBranchPerformance = async (req, res) => {
 };
 
 // 4. GET BRANCH STOCK ALERTS
-exports.getBranchStockAlerts = async (req, res) => {
+const getBranchStockAlerts = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("branch_stock")
@@ -120,24 +124,30 @@ exports.getBranchStockAlerts = async (req, res) => {
         id,
         quantity,
         low_stock_threshold,
+        updated_at,
         medicines:medicine_id ( id, name, category ),
-        branches:branch_id ( id, name )
-      `)
-      .filter("quantity", "lte", "low_stock_threshold");
+        branches:branch_id ( id, branch_name )
+      `);
 
     if (error) throw error;
 
+    const alerts = (data || []).filter(
+      (item) => Number(item.quantity) <= Number(item.low_stock_threshold)
+    );
+
     return res.status(200).json({
       success: true,
-      data: data,
+      count: alerts.length,
+      data: alerts,
     });
   } catch (error) {
+    console.error("Error fetching branch stock alerts:", error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
 // 5. GET TODAY'S ORDERS
-exports.getTodaysOrders = async (req, res) => {
+const getTodaysOrders = async (req, res) => {
   try {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -149,8 +159,8 @@ exports.getTodaysOrders = async (req, res) => {
         status,
         total_amount,
         created_at,
-        branches:branch_id ( name ),
-        users:customer_id ( full_name, email )
+        branches:branches(branches_id, branch_name ),
+        customers:customers(customer_id, full_name, email, phone )
       `)
       .gte("created_at", startOfDay.toISOString())
       .order("created_at", { ascending: false });
@@ -159,16 +169,17 @@ exports.getTodaysOrders = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      count: data.length,
-      data: data,
+      count: (data || []).length,
+      data: data || [],
     });
   } catch (error) {
+    console.error("Error fetching today's orders:", error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
 // 6. GET PRESCRIPTION LOGS
-exports.getPrescriptionLogs = async (req, res) => {
+const getPrescriptionLogs = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("prescription_reviews")
@@ -177,8 +188,8 @@ exports.getPrescriptionLogs = async (req, res) => {
         status,
         remarks,
         reviewed_at,
-        prescriptions:prescription_id ( id, image_url, customer_id ),
-        users:pharmacist_id ( full_name, email )
+        prescriptions:prescription_id ( id, image_url, customer_id, order_id ),
+        pharmacists:pharmacist_id ( id, full_name, email, license_number )
       `)
       .order("reviewed_at", { ascending: false });
 
@@ -186,19 +197,20 @@ exports.getPrescriptionLogs = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      data: data,
+      data: data || [],
     });
   } catch (error) {
+    console.error("Error fetching prescription logs:", error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
 };
 
 // 7. EXPORT BRANCH PERFORMANCE REPORT
-exports.getExportBranchPerformance = async (req, res) => {
+const getExportBranchPerformance = async (req, res) => {
   try {
     const { data: branches, error: branchErr } = await supabase
       .from("branches")
-      .select("id, name, address");
+      .select("id, branch_name, address, city, state");
 
     if (branchErr) throw branchErr;
 
@@ -208,14 +220,14 @@ exports.getExportBranchPerformance = async (req, res) => {
 
     if (orderErr) throw orderErr;
 
-    const report = branches.map((branch) => {
-      const branchOrders = orders.filter((o) => o.branch_id === branch.id);
+    const report = (branches || []).map((branch) => {
+      const branchOrders = (orders || []).filter((o) => o.branch_id === branch.id);
       const totalRevenue = branchOrders.reduce(
         (sum, o) => sum + Number(o.total_amount || 0),
         0
       );
       const completedOrders = branchOrders.filter(
-        (o) => o.status === "completed"
+        (o) => o.status === "completed" || o.status === "delivered"
       ).length;
       const cancelledOrders = branchOrders.filter(
         (o) => o.status === "cancelled"
@@ -223,8 +235,8 @@ exports.getExportBranchPerformance = async (req, res) => {
 
       return {
         branch_id: branch.id,
-        branch_name: branch.name,
-        address: branch.address || "N/A",
+        branch_name: branch.branch_name || "N/A",
+        address: `${branch.address || ""}, ${branch.city || ""}`.trim() || "N/A",
         total_orders: branchOrders.length,
         completed_orders: completedOrders,
         cancelled_orders: cancelledOrders,
@@ -239,8 +251,8 @@ exports.getExportBranchPerformance = async (req, res) => {
   }
 };
 
-// 8. REVIEW MANUAL ORDERS (Fetch & Update)
-exports.getManualOrders = async (req, res) => {
+// 8. REVIEW MANUAL ORDERS
+const getManualOrders = async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("orders")
@@ -249,13 +261,13 @@ exports.getManualOrders = async (req, res) => {
         status,
         total_amount,
         created_at,
-        users:customer_id ( full_name, email, phone ),
-        branches:branch_id ( name ),
+        users:customer_id ( id, full_name, email, phone ),
+        branches:branch_id ( id, branch_name, city ),
         order_items (
           id,
           quantity,
           price,
-          medicines:medicine_id ( name )
+          medicines:medicine_id ( id, name )
         ),
         prescriptions (
           id,
@@ -265,38 +277,49 @@ exports.getManualOrders = async (req, res) => {
       `)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching manual orders:", error.message);
-      return res.status(500).json({ success: false, message: error.message });
-    }
+    if (error) throw error;
 
-    return res.status(200).json({ success: true, data });
+    return res.status(200).json({ success: true, data: data || [] });
   } catch (err) {
     console.error("Error fetching manual orders:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-exports.updateOrderStatus = async (req, res) => {
+// 9. UNIFIED ORDER STATUS UPDATE
+const updateOrderStatus = async (req, res) => {
   try {
-    const { order_id, status } = req.body;
+    const orderId = req.params.orderId || req.body.order_id || req.body.orderId;
+    const status = req.body.status;
+
+    if (!orderId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "order_id and status are required.",
+      });
+    }
 
     const { data, error } = await supabase
       .from("orders")
       .update({ status })
-      .eq("id", order_id)
+      .eq("id", orderId)
       .select();
 
     if (error) throw error;
-    return res.status(200).json({ success: true, data });
+
+    return res.status(200).json({
+      success: true,
+      message: `Order #${orderId} updated to ${status}`,
+      data: data?.[0] || data,
+    });
   } catch (err) {
     console.error("Error updating order status:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// 9. TRACK STOCK-RELATED ORDER FAILURES
-exports.getStockRelatedFailures = async (req, res) => {
+// 10. TRACK STOCK-RELATED ORDER FAILURES
+const getStockRelatedFailures = async (req, res) => {
   try {
     const { data: cancelledOrders, error: orderErr } = await supabase
       .from("orders")
@@ -304,7 +327,7 @@ exports.getStockRelatedFailures = async (req, res) => {
         id,
         created_at,
         status,
-        branches:branch_id ( name ),
+        branches:branch_id ( branch_name ),
         order_items (
           medicine_id,
           quantity,
@@ -315,19 +338,128 @@ exports.getStockRelatedFailures = async (req, res) => {
 
     if (orderErr) throw orderErr;
 
-    const stockFailures = cancelledOrders.map((order) => ({
-      order_id: order.id,
-      branch: order.branches?.name || "Unknown",
-      cancelled_at: order.created_at,
-      items: order.order_items.map((item) => ({
-        medicine_name: item.medicines?.name,
-        requested_quantity: item.quantity,
-      })),
-    }));
+    const stockFailures = (cancelledOrders || []).map((order) => {
+      const branchObj = order.branches;
+      const branchName = branchObj?.branch_name || "Unknown";
+
+      return {
+        order_id: order.id,
+        branch: branchName,
+        cancelled_at: order.created_at,
+        items: (order.order_items || []).map((item) => {
+          const med = Array.isArray(item.medicines) ? item.medicines[0] : item.medicines;
+          return {
+            medicine_name: med?.name || "Unknown Medicine",
+            requested_quantity: item.quantity,
+          };
+        }),
+      };
+    });
 
     return res.status(200).json({ success: true, data: stockFailures });
   } catch (err) {
     console.error("Error fetching stock failures:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
+};
+
+// 11. GET PENDING ORDERS
+const getPendingOrders = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        id,
+        total_amount,
+        status,
+        created_at,
+        users:customer_id ( id, full_name, email, phone ),
+        branches:branch_id ( id, branch_name )
+      `)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      success: true,
+      data: data || [],
+    });
+  } catch (err) {
+    console.error("Error fetching pending orders:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending orders",
+    });
+  }
+};
+
+// 12. GET ALL PHARMACISTS
+const getAllPharmacists = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("pharmacists")
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        license_number,
+        status,
+        created_at,
+        branches:branch_id ( id, branch_name )
+      `);
+
+    if (error) throw error;
+
+    return res.status(200).json({ success: true, data: data || [] });
+  } catch (err) {
+    console.error("Error fetching pharmacists:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// TRACK STOCK-RELATED ORDER FAILURES
+
+
+// 13. GET ALL DELIVERY PARTNERS
+const getAllDeliveryPartners = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("delivery_partners")
+      .select(`
+        id,
+        full_name,
+        email,
+        phone,
+        vehicle_type,
+        vehicle_number,
+        status,
+        created_at,
+        branches:branch_id ( id, branch_name )
+      `);
+
+    if (error) throw error;
+
+    return res.status(200).json({ success: true, data: data || [] });
+  } catch (err) {
+    console.error("Error fetching delivery partners:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  getTopSellingMedicines,
+  getLowStockReport,
+  getBranchPerformance,
+  getBranchStockAlerts,
+  getTodaysOrders,
+  getPrescriptionLogs,
+  getExportBranchPerformance,
+  getManualOrders,
+  updateOrderStatus,
+  getStockRelatedFailures,
+  getPendingOrders,
+  getAllPharmacists,
+  getAllDeliveryPartners,
 };
