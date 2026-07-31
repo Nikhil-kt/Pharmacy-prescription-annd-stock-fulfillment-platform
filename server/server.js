@@ -2,9 +2,13 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
+// Route Imports
 const prescriptionRoutes = require("./routes/prescriptionRoutes");
 const deliveryRoutes = require("./routes/deliveryRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+
+// Supabase Connection
+const supabase = require("./config/supabase");
 const inventorystockRoutes = require("./routes/InventorystockRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 
@@ -20,10 +24,9 @@ const supabase = require("./config/supabase");
 /* ==========================================================
    FIREBASE ADMIN INITIALIZATION
 ========================================================== */
-try {
-  const { initializeApp, cert, getApps } = require("firebase-admin/app");
-  const { getAuth } = require("firebase-admin/auth");
-  const { getFirestore } = require("firebase-admin/firestore");
+const { initializeApp, cert } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const { getFirestore } = require("firebase-admin/firestore");
 
   const serviceAccount = require("./serviceAccountKey.json");
 
@@ -40,9 +43,10 @@ try {
 }
 
 /* ==========================================================
-   ROOT ROUTE
+   API ROUTES
 ========================================================== */
 
+// Root Check
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -50,8 +54,159 @@ app.get("/", (req, res) => {
   });
 });
 
+// Mounted Modular Routes
+app.use("/api/admin", adminRoutes);
 app.use("/api/prescriptions", prescriptionRoutes);
 app.use("/api/delivery", deliveryRoutes);
+
+/* ==========================================================
+   SUPABASE DATABASE TEST
+========================================================== */
+app.get("/api/test-db", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("medicines")
+      .select("*")
+      .limit(5);
+
+    if (error) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+
+    res.json({
+      success: true,
+      medicines: data,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+/* ==========================================================
+   FIREBASE AUTHENTICATION ENDPOINTS
+========================================================== */
+
+// Signup
+app.post("/api/signup", async (req, res) => {
+  try {
+    const { fullName, email, password, role } = req.body;
+
+    if (!fullName || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required.",
+      });
+    }
+
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: fullName,
+    });
+
+    await db.collection("users").doc(userRecord.uid).set({
+      fullName,
+      email,
+      role,
+      createdAt: new Date().toISOString(),
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Account created successfully!",
+      role,
+    });
+  } catch (error) {
+    console.error("Firebase Signup Error:", error);
+
+    if (error.code === "auth/email-already-exists") {
+      return res.status(400).json({
+        success: false,
+        message: "Email is already registered.",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to create account.",
+    });
+  }
+});
+
+// Login
+app.post("/api/login", async (req, res) => {
+  try {
+    const { role, email, password } = req.body;
+
+    if (!role || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill in all fields.",
+      });
+    }
+
+    let userRecord;
+
+    try {
+      userRecord = await auth.getUserByEmail(email);
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email or password.",
+      });
+    }
+
+    const userDoc = await db
+      .collection("users")
+      .doc(userRecord.uid)
+      .get();
+
+    if (!userDoc.exists) {
+      return res.status(400).json({
+        success: false,
+        message: "User profile not found.",
+      });
+    }
+
+    const userData = userDoc.data();
+
+    if (userData.role !== role) {
+      return res.status(400).json({
+        success: false,
+        message: `No ${role} account registered with this email.`,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Login successful!",
+      role: userData.role,
+      user: {
+        uid: userRecord.uid,
+        fullName: userData.fullName,
+        email: userData.email,
+        role: userData.role,
+      },
+    });
+  } catch (error) {
+    console.error("Firebase Login Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+/* ==========================================================
+   START SERVER
+========================================================== */
 app.use("/api/admin", adminRoutes);
 app.use("/api/inventory", inventorystockRoutes);
 app.use("/api/customer", customerRoutes);
@@ -69,12 +224,4 @@ const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 RxConnect Backend running on http://localhost:${PORT}`);
-});
-
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use by another process.`);
-  } else {
-    console.error("❌ Server Error:", err);
-  }
 });
