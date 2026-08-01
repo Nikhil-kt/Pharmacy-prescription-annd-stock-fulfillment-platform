@@ -30,3 +30,4 @@ router.put("/:id/delivered", completeDelivery);
 router.get("/partner/:partnerId/dashboard", getDeliveryDashboard);
 
 module.exports = router;
+module.exports = router;

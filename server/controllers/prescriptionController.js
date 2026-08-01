@@ -1,75 +1,5 @@
 const supabase = require("../config/supabase");
 
-exports.uploadPrescription = async (req, res) => {
-  try {
-    const { customer_id, image_url } = req.body;
-
-    // Basic validation
-    if (!customer_id || !image_url) {
-      return res.status(400).json({
-        success: false,
-        error: "customer_id and image_url are required.",
-      });
-    }
-
-    const { data, error } = await supabase
-      .from("prescriptionss")
-      .insert([
-        {
-          customer_id,
-          image_url,
-          status: "PENDING", // Default in DB, but explicitly setting it is fine
-        },
-      ])
-      .select();
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-
-    return res.status(201).json({
-      success: true,
-      message: "Prescription uploaded successfully.",
-      prescription: data[0],
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-};
-
-exports.getAllPrescriptions = async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("prescriptionss")
-      .select("*")
-      .order("uploaded_at", { ascending: false });
-
-    if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.message,
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      count: data.length,
-      prescriptions: data,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-};
-
 exports.getPendingPrescriptions = async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -79,22 +9,12 @@ exports.getPendingPrescriptions = async (req, res) => {
       .order("uploaded_at", { ascending: false });
 
     if (error) {
-      return res.status(400).json({
-        success: false,
-        error: error.message,
-      });
+      return res.status(400).json({ success: false, error: error.message });
     }
 
-    return res.status(200).json({
-      success: true,
-      count: data.length,
-      prescriptions: data,
-    });
+    return res.status(200).json({ success: true, data });
   } catch (err) {
-    return res.status(500).json({
-      success: false,
-      error: err.message,
-    });
+    return res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -132,7 +52,6 @@ exports.approvePrescription = async (req, res) => {
     const { id } = req.params;
     const { pharmacist_id, remarks } = req.body;
 
-    // Validate request
     if (!pharmacist_id) {
       return res.status(400).json({
         success: false,
@@ -227,4 +146,3 @@ exports.rejectPrescription = async (req, res) => {
     });
   }
 };
-
